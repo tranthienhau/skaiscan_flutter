@@ -203,16 +203,16 @@ class ThemeProvider {
   static final TextTheme _textTheme = TextTheme(
     ///appbar title
 
-    headline3: GoogleFonts.notoSans(fontWeight: _medium, fontSize: 60.0),
-    headline5: GoogleFonts.notoSans(fontWeight: _bold, fontSize: 24.0),
-    headline6: GoogleFonts.notoSans(fontWeight: _medium, fontSize: 21.0),
-    caption: GoogleFonts.notoSans(fontWeight: _semiBold, fontSize: 14.0),
-    subtitle1: GoogleFonts.notoSans(fontWeight: _medium, fontSize: 15.0),
-    overline: GoogleFonts.notoSans(fontWeight: _medium, fontSize: 13.0),
-    bodyText1: GoogleFonts.notoSans(fontWeight: _regular, fontSize: 17.0),
-    subtitle2: GoogleFonts.notoSans(fontWeight: _medium, fontSize: 13.0),
-    bodyText2: GoogleFonts.notoSans(fontWeight: _regular, fontSize: 14.0),
-    button: GoogleFonts.notoSans(fontWeight: _medium, fontSize: 17.0),
+    headline3: GoogleFonts.roboto(fontWeight: _medium, fontSize: 60.0),
+    headline5: GoogleFonts.roboto(fontWeight: _bold, fontSize: 24.0),
+    headline6: GoogleFonts.roboto(fontWeight: _medium, fontSize: 21.0),
+    caption: GoogleFonts.roboto(fontWeight: _semiBold, fontSize: 14.0),
+    subtitle1: GoogleFonts.roboto(fontWeight: _medium, fontSize: 15.0),
+    overline: GoogleFonts.roboto(fontWeight: _medium, fontSize: 13.0),
+    bodyText1: GoogleFonts.roboto(fontWeight: _regular, fontSize: 17.0),
+    subtitle2: GoogleFonts.roboto(fontWeight: _medium, fontSize: 13.0),
+    bodyText2: GoogleFonts.roboto(fontWeight: _regular, fontSize: 14.0),
+    button: GoogleFonts.roboto(fontWeight: _medium, fontSize: 17.0),
   );
 }
 

@@ -7,55 +7,28 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
 
+class $AssetsFeatureGen {
+  const $AssetsFeatureGen();
+
+  SvgGenImage get onBoarding1 =>
+      const SvgGenImage('assets/feature/on_boarding_1.svg');
+  SvgGenImage get onBoarding2 =>
+      const SvgGenImage('assets/feature/on_boarding_2.svg');
+}
+
 class $AssetsIconGen {
   const $AssetsIconGen();
 
-  SvgGenImage get call => const SvgGenImage('assets/icon/call.svg');
-  SvgGenImage get checklist => const SvgGenImage('assets/icon/checklist.svg');
-  SvgGenImage get delete => const SvgGenImage('assets/icon/delete.svg');
-  SvgGenImage get edit => const SvgGenImage('assets/icon/edit.svg');
-  SvgGenImage get googleMap => const SvgGenImage('assets/icon/google_map.svg');
-  SvgGenImage get home => const SvgGenImage('assets/icon/home.svg');
-  SvgGenImage get logout => const SvgGenImage('assets/icon/logout.svg');
-  SvgGenImage get moreHorizontal =>
-      const SvgGenImage('assets/icon/more_horizontal.svg');
-  SvgGenImage get noAvatar => const SvgGenImage('assets/icon/no_avatar.svg');
-  SvgGenImage get pin => const SvgGenImage('assets/icon/pin.svg');
-  SvgGenImage get refreshDisable =>
-      const SvgGenImage('assets/icon/refresh_disable.svg');
-  SvgGenImage get refreshEnable =>
-      const SvgGenImage('assets/icon/refresh_enable.svg');
-  SvgGenImage get wifiOff => const SvgGenImage('assets/icon/wifi_off.svg');
-}
-
-class $AssetsImageGen {
-  const $AssetsImageGen();
-
-  AssetGenImage get assignedJobsEmpty =>
-      const AssetGenImage('assets/image/assigned_jobs_empty.png');
-  AssetGenImage get background =>
-      const AssetGenImage('assets/image/background.png');
-  AssetGenImage get googleMap =>
-      const AssetGenImage('assets/image/google_map.png');
-  AssetGenImage get inputEmail =>
-      const AssetGenImage('assets/image/input_email.png');
-  AssetGenImage get loginImage =>
-      const AssetGenImage('assets/image/login_image.png');
-  AssetGenImage get mail => const AssetGenImage('assets/image/mail.png');
-  AssetGenImage get marker => const AssetGenImage('assets/image/marker.png');
-  AssetGenImage get selectedMarker =>
-      const AssetGenImage('assets/image/selected_marker.png');
-  AssetGenImage get shapeLogin =>
-      const AssetGenImage('assets/image/shape_login.png');
-  AssetGenImage get textLogin =>
-      const AssetGenImage('assets/image/text_login.png');
+  SvgGenImage get cornersOut =>
+      const SvgGenImage('assets/icon/corners_out.svg');
+  SvgGenImage get logo => const SvgGenImage('assets/icon/logo.svg');
 }
 
 class Assets {
   Assets._();
 
+  static const $AssetsFeatureGen feature = $AssetsFeatureGen();
   static const $AssetsIconGen icon = $AssetsIconGen();
-  static const $AssetsImageGen image = $AssetsImageGen();
 }
 
 class AssetGenImage extends AssetImage {

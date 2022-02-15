@@ -25,15 +25,13 @@ class _MyAppState extends State<_MyApp> {
       providers: [
         BlocProvider<ApplicationBloc>.value(
           value: _applicationBloc
-            ..add(
-              ApplicationLoaded(),
-            ),
+
         ),
       ],
       child: OverlaySupport.global(
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
-          title: 'Scan App',
+          title: 'Skaiscan',
           theme: ThemeProvider.getTheme(isDarkMode: false),
           darkTheme: ThemeData.light(),
           themeMode: AppOptions.of(context)!.themeMode,
@@ -56,8 +54,8 @@ class _MyAppState extends State<_MyApp> {
   }
 }
 
-class AcneScanApp extends StatelessWidget {
-  const AcneScanApp({Key? key}) : super(key: key);
+class SkaiScanApp extends StatelessWidget {
+  const SkaiScanApp({Key? key}) : super(key: key);
 
   // This widget is the root of your application.
   @override

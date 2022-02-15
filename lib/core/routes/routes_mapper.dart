@@ -1,6 +1,9 @@
-import 'package:skaiscan/core/theme_provider.dart';
 import 'package:flutter/material.dart';
-
+import 'package:skaiscan/all_file/all_file.dart';
+import 'package:skaiscan/core/theme_provider.dart';
+import 'package:skaiscan/pages/home/ui/home_page.dart';
+import 'package:skaiscan/pages/introduce/introduct_page.dart';
+import 'package:skaiscan/pages/onboarding/ui/onboarding_page.dart';
 
 class RoutesMapper {
   RoutesMapper._();
@@ -51,7 +54,11 @@ class RoutesMapper {
 
   ///Return route without settings
   static Map<String, WidgetBuilder> buildRoute() => {
-
-        // AppRoutes.previewPhoto: (BuildContext context)=> _buildApplyTextOptionsPage(const PhotoPreviewPage()),
+        AppRoutes.onBoarding: (BuildContext context) =>
+            _buildApplyTextOptionsPage(const OnBoardingPage()),
+        AppRoutes.introduce: (BuildContext context) =>
+            _buildApplyTextOptionsPage(const IntroducePage()),
+        AppRoutes.home: (BuildContext context) =>
+            _buildApplyTextOptionsPage(const HomePage()),
       };
 }

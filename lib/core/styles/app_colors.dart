@@ -83,8 +83,8 @@ class AppColors {
   }
 
   /// The primary color. Apply for default button, appbar, title
-  static const primaryColor = Color(0xFF2800CE);
-  static const primaryColor2 = Color(0xFF0500ED);
+  static const primaryColor = Color(0xFFFFB28A);
+  static const primaryColor2 = Color(0xFFFFB28A);
 
   static const secondary1Color = Color(0xFFD1ECFA);
   static const secondary2Color = Color(0xFFD1ECFA);
@@ -103,7 +103,7 @@ class AppColors {
 
   static const redBackgroundColor = Color(0xFFFFECF1);
   static const background = Color(0xFFFFFFFF);
-  static const Color grey = Color(0xFF6694B0);
+  static const Color grey = Color(0xFFF6F6F6);
   static const Color grey2 = Color(0xFF8EAFC2);
   static const Color grey3 = Color(0xFFD0E1EB);
   static const Color grey4 = Color(0xFFECF1F4);
