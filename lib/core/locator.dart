@@ -1,6 +1,9 @@
 import 'package:get_it/get_it.dart';
+import 'package:google_vision_api/google_vision_api.dart';
 import 'package:skaiscan/core/app_config.dart';
 import 'package:skaiscan/core/styles/app_style_config.dart';
+import 'package:skaiscan/services/acne_scan/acne_scan_service.dart';
+import 'package:skaiscan/services/acne_scan/tf_acne_scan_service.dart';
 import 'package:skaiscan/services/camera_service.dart';
 import 'package:skaiscan/services/face_detection_service.dart';
 
@@ -24,11 +27,18 @@ void _setupDependentService() {
     () => FaceDetectorService(),
   );
 
-
   GetIt.I.registerLazySingleton<CameraService>(
     () => CameraService(),
+  );
+
+  GetIt.I.registerLazySingleton<AcneScanService>(
+    () => TfAcneScanService(),
   );
 }
 
 /// All Api services are registered here.
-void _setupDependentApi() {}
+void _setupDependentApi() {
+  GetIt.I.registerLazySingleton<VisionApiClient>(
+    () => DioVisionApiClient(),
+  );
+}

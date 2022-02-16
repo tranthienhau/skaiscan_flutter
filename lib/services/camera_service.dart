@@ -26,7 +26,7 @@ class CameraService {
   final StreamController<CameraImage> _cameraStreamController =
       StreamController<CameraImage>.broadcast();
 
-  Future startService(CameraDescription cameraDescription) async {
+  Future<void> startService(CameraDescription cameraDescription) async {
     _cameraDescription = cameraDescription;
     _cameraController = CameraController(
       _cameraDescription,
@@ -39,12 +39,13 @@ class CameraService {
       _cameraDescription.sensorOrientation,
     );
 
+    await _cameraController.initialize();
+
     _cameraController.startImageStream((image) async {
       _cameraStreamController.add(image);
     });
 
     // Next, initialize the controller. This returns a Future.
-    return _cameraController.initialize();
   }
 
   InputImageRotation rotationIntToImageRotation(int rotation) {

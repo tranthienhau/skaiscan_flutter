@@ -54,8 +54,8 @@ class _MyAppState extends State<_MyApp> {
   }
 }
 
-class SkaiScanApp extends StatelessWidget {
-  const SkaiScanApp({Key? key}) : super(key: key);
+class SkaiscanApp extends StatelessWidget {
+  const SkaiscanApp({Key? key}) : super(key: key);
 
   // This widget is the root of your application.
   @override

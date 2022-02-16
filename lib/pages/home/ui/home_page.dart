@@ -1,7 +1,12 @@
 import 'package:camera/camera.dart';
 import 'package:dotted_decoration/dotted_decoration.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import 'package:skaiscan/all_file/all_file.dart';
+import 'package:skaiscan/pages/home/bloc/home_bloc.dart';
+import 'package:skaiscan/services/camera_service.dart';
+import 'package:skaiscan/widgets/loading_indicator.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -11,51 +16,38 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  CameraDescription? _cameraDescription;
-  late Future<void> _initializeControllerFuture;
-
-  Future<void> _initCamera() async {
-    List<CameraDescription> cameras = await availableCameras();
-    _cameraDescription = cameras.last;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeControllerFuture = _initCamera();
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: _buildBody(),
+    return BlocProvider(
+      create: (context) => HomeBloc()..add(HomeLoaded()),
+      child: Scaffold(
+        body: _buildBody(),
+      ),
     );
   }
 
   Widget _buildBody() {
-    return FutureBuilder<void>(
-      future: _initializeControllerFuture,
-      builder: (context, snapshot) {
-        return _buildCameraView();
-        // if (snapshot.connectionState == ConnectionState.done) {
-        //   // If the Future is complete, display the preview.
-        //
-        // } else {
-        //   // Otherwise, display a loading indicator.
-        //   return const Center(child: CircularProgressIndicator());
-        // }
+    return BlocBuilder<HomeBloc, HomeState>(
+      builder: (context, state) {
+        final data = state.data;
+
+        if (data.cameraDescriptionList.isEmpty) {
+          return const Center(
+            child: LoadingIndicator(),
+          );
+        }
+
+        return _buildCameraView(data.cameraDescriptionList.last);
       },
     );
   }
 
-  Widget _buildCameraView() {
-    if (_cameraDescription == null) {
-      return 0.toVSizeBox();
-    }
-
+  Widget _buildCameraView(CameraDescription cameraDescription) {
     return CameraView(
-      description: _cameraDescription!,
-      onCaptured: (XFile file) async {},
+      description: cameraDescription,
+      onCaptured: (XFile file) async {
+
+      },
     );
   }
 }
@@ -71,38 +63,25 @@ class CameraView extends StatefulWidget {
 }
 
 class _CameraViewState extends State<CameraView> {
-  late CameraController _controller;
+  CameraController? _controller;
+  late CameraService _cameraService;
 
   @override
   void initState() {
     super.initState();
-    _controller = CameraController(widget.description, ResolutionPreset.medium);
-    _controller.initialize().then((_) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {});
-    });
-
-    _controller.startImageStream((image) {
-      if (!mounted) {
-        return;
-      }
-
-      
-
-    });
+    _cameraService = GetIt.I<CameraService>();
+    _initCamera();
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  Future<void> _initCamera() async {
+    await _cameraService.startService(widget.description);
+    _controller = _cameraService.controller;
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_controller.value.isInitialized) {
+    if (!(_controller?.value.isInitialized ?? false)) {
       return const SizedBox();
     }
 
@@ -110,8 +89,13 @@ class _CameraViewState extends State<CameraView> {
   }
 
   Widget _buildCameraView() {
+    final controller = _controller;
+    if (controller == null) {
+      return const SizedBox();
+    }
+
     final scale = 1 /
-        (_controller.value.aspectRatio *
+        (controller.value.aspectRatio *
             MediaQuery.of(context).size.aspectRatio);
 
     return SizedBox(
@@ -122,21 +106,21 @@ class _CameraViewState extends State<CameraView> {
           Transform.scale(
             scale: scale,
             alignment: Alignment.topCenter,
-            child: CameraPreview(_controller),
+            child: CameraPreview(controller),
           ),
           Positioned(
-            top: 0,
-            left: 38,
-            bottom: 0,
-            right: 38,
+            top: ViewUtils.getPercentHeight(percent: 0.1083),
+            left: 27,
+            // bottom: 0,
+            right: 27,
             child: Center(
               child: Container(
                 width: MediaQuery.of(context).size.width,
-                height: 1.296 * (MediaQuery.of(context).size.width - 76),
+                height: MediaQuery.of(context).size.width - 54,
                 decoration: DottedDecoration(
-                  shape: Shape.circle,
-                  dash: const <int>[8, 8],
-                  color: Colors.white,
+                  shape: Shape.box,
+                  dash: const <int>[3, 3],
+                  color: AppColors.dotLine,
                 ),
               ),
             ),
@@ -144,15 +128,25 @@ class _CameraViewState extends State<CameraView> {
           Positioned(
             left: 0,
             right: 0,
-            top: 25,
+            bottom: 0,
+            child: Container(
+              height: ViewUtils.getPercentHeight(percent: 0.307),
+              width: double.infinity,
+              color: Colors.black,
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: ViewUtils.getPercentHeight(percent: 0.0554),
             child: SafeArea(
               child: Text(
-                'Position your face \ninside the line',
+                'Убедитесь что лицо в рамке и посмотрите в\nкамеру',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyText1?.copyWith(
                       color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontStyle: FontStyle.italic,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
                     ),
               ),
             ),

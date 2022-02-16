@@ -19,7 +19,7 @@ Future<void> main() async {
     () {
       runZonedGuarded(
         () async {
-          runApp(const SkaiScanApp());
+          runApp(const SkaiscanApp());
         },
         onError,
       );
