@@ -85,6 +85,7 @@ class AppColors {
   /// The primary color. Apply for default button, appbar, title
   static const primaryColor = Color(0xFFFFB28A);
   static const primaryColor2 = Color(0xFFFFB28A);
+  static const primaryLight= Color(0xFFF7D3C0);
 
   static const secondary1Color = Color(0xFFD1ECFA);
   static const secondary2Color = Color(0xFFD1ECFA);

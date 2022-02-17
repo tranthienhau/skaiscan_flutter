@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:bloc/bloc.dart';
@@ -10,7 +11,6 @@ import 'package:google_vision_api/google_vision_api.dart';
 import 'package:image/image.dart' as imglib;
 import 'package:skaiscan/services/acne_scan/acne_scan_service.dart';
 import 'package:skaiscan/services/camera_service.dart';
-import 'package:skaiscan/services/face_detection_service.dart';
 import 'package:skaiscan/utils/utils.dart';
 import 'package:skaiscan_ffi/skaiscan_ffi.dart';
 
@@ -21,7 +21,7 @@ part 'home_state.dart';
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
   HomeBloc({
     CameraService? cameraService,
-    FaceDetectorService? faceDetectorService,
+    // FaceDetectorService? faceDetectorService,
     VisionApiClient? visionApiClient,
     AcneScanService? acneScanService,
   }) : super(
@@ -35,116 +35,271 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     _cameraService = cameraService ?? GetIt.I<CameraService>();
     _acneScanService = acneScanService ?? GetIt.I<AcneScanService>();
     _visionApiClient = visionApiClient ?? GetIt.I<VisionApiClient>();
-    _faceDetectorService =
-        faceDetectorService ?? GetIt.I<FaceDetectorService>();
-    _faceDetectorService.initialize();
+    // _faceDetectorService =
+    //     faceDetectorService ?? GetIt.I<FaceDetectorService>();
+    // _faceDetectorService.initialize();
     on<HomeLoaded>(_onLoaded);
     on<HomeAcneScan>(_onAcneScan);
-    // _cameraStreamSubscription = _cameraService.cameraImageStream
-    //     .listen((CameraImage cameraImage) async {
-    //
-    // });
+    on<HomeCameraFaceChecked>(_onCameraFaceChecked);
+    _cameraStreamSubscription = _cameraService.cameraImageStream
+        .listen((CameraImage cameraImage) async {
+      if (_cameraCheckCompleter?.isCompleted ?? true) {
+        // add(HomeCameraFaceChecked(cameraImage));
+      }
+    });
   }
 
   final _nativeOpencv = NativeOpencv();
   late CameraService _cameraService;
   late StreamSubscription _cameraStreamSubscription;
-  late FaceDetectorService _faceDetectorService;
+
+  // late FaceDetectorService _faceDetectorService;
   late VisionApiClient _visionApiClient;
   late AcneScanService _acneScanService;
   Completer<void>? _completer;
+  Completer<void>? _cameraCheckCompleter;
+  Rectangle<int>? _uiRectangle;
+
+  Future<void> _onCameraFaceChecked(
+    HomeCameraFaceChecked event,
+    Emitter<HomeState> emit,
+  ) async {
+    if (!(_cameraCheckCompleter?.isCompleted ?? true)) {
+      return;
+    }
+
+    _cameraCheckCompleter = Completer<void>();
+
+    if (_uiRectangle != null) {
+      ///calculate rectangle in camera
+      final top = ViewUtils.getPercentHeight(percent: 0.1083);
+
+      final screenWidth = ViewUtils.getPercentWidth(percent: 1.0);
+
+      final screenHeight = ViewUtils.getPercentHeight(percent: 1.0);
+
+      const left = 27;
+
+      final size = screenWidth - left * 2;
+
+      Alignment _resolvedAlignment =
+          Alignment.center.resolve(TextDirection.ltr);
+
+      final Size target = Size(screenWidth, screenHeight);
+
+      final Size childSize = Size(event.cameraImage.width.toDouble(),
+          event.cameraImage.height.toDouble());
+
+      final FittedSizes sizes = applyBoxFit(BoxFit.cover, childSize, target);
+
+      final double scaleX = sizes.destination.width / sizes.source.width;
+
+      final double scaleY = sizes.destination.height / sizes.source.height;
+
+      final Rect sourceRect =
+          _resolvedAlignment.inscribe(sizes.source, Offset.zero & childSize);
+
+      // final Rect destinationRect =
+      //     _resolvedAlignment.inscribe(sizes.destination, Offset.zero & target);
+
+      // double offsetLeft = left - destinationRect.left;
+      // offsetLeft = offsetLeft < 0 ? 0 : offsetLeft;
+
+      double targetLeft = sourceRect.left + left * (1 / scaleX);
+
+      double targetRight = targetLeft + size * (1 / scaleX);
+
+      double targetTop = sourceRect.top + top * (1 / scaleY);
+
+      double targetBottom = targetTop + size * (1 / scaleY);
+
+      _uiRectangle = Rectangle<int>(
+        targetLeft.toInt(),
+        targetTop.toInt(),
+        (targetRight - targetLeft).toInt(),
+        (targetBottom - targetTop).toInt(),
+      );
+    }
+
+    final List<VisionRequest<FaceFeatureRequest>> requests = [
+      VisionRequest<FaceFeatureRequest>(
+        image: VisionImageRequest(content: ''),
+        features: <FaceFeatureRequest>[
+          FaceFeatureRequest(
+            type: 'FACE_DETECTION',
+            maxResults: 1,
+          )
+        ],
+      )
+    ];
+
+    final GoogleVisionResult<FaceAnnotation> result =
+        await _visionApiClient.detectFaces(requests);
+
+    if (result.responses.isNotEmpty) {
+      final faceAnnotations = result.responses.first.faceAnnotations;
+
+      if (faceAnnotations.isNotEmpty) {
+        final faceAnnotation = faceAnnotations.first;
+        final boundingPoly = faceAnnotation.boundingPoly;
+
+        if (boundingPoly != null && boundingPoly.verticesList.isNotEmpty) {
+          int minX = -1;
+          int maxX = -1;
+          int minY = -1;
+          int maxY = -1;
+
+          for (final vertices in boundingPoly.verticesList) {
+            final x = vertices.x;
+            final y = vertices.y;
+
+            if (minX == -1) {
+              minX = x;
+            } else if (minX > x) {
+              minX = x;
+            }
+
+            if (maxX == -1) {
+              maxX = x;
+            } else if (maxX < x) {
+              maxX = x;
+            }
+
+            if (minY == -1) {
+              minY = y;
+            } else if (minY > y) {
+              minY = y;
+            }
+
+            if (maxY == -1) {
+              maxY = y;
+            } else if (maxY < y) {
+              maxY = y;
+            }
+          }
+
+          Rectangle<int> rectangle = Rectangle<int>(
+            minX,
+            minY,
+            maxX - minX,
+            maxY - minY,
+          );
+        }
+      }
+    }
+
+    _cameraCheckCompleter?.complete();
+  }
 
   Future<void> _onAcneScan(
     HomeAcneScan event,
     Emitter<HomeState> emit,
   ) async {
-    // await _completer?.future;
+    await _completer?.future;
 
     _completer = Completer<void>();
 
-    ///calculate rectangle in camera
-    final top = ViewUtils.getPercentHeight(percent: 0.1083);
+    try {
+      ///calculate rectangle in camera
+      final top = ViewUtils.getPercentHeight(percent: 0.1083);
 
-    final screenWidth = ViewUtils.getPercentWidth(percent: 1.0);
-    final screenHeight = ViewUtils.getPercentHeight(percent: 1.0);
+      final screenWidth = ViewUtils.getPercentWidth(percent: 1.0);
 
-    const left = 27;
+      final screenHeight = ViewUtils.getPercentHeight(percent: 1.0);
 
-    final size = screenWidth - left * 2;
+      const left = 27;
 
-    final right = left + size;
+      final size = screenWidth - left * 2;
 
-    final bottom = top + size;
+      final bytes = await event.file.readAsBytes();
 
-    // print('width ${cameraImage.width}, height: ${cameraImage.height}');
+      // String base64Image = base64Encode(bytes);
 
-    // imglib.Image image = imglib.Image.;
+      final image = imglib.decodeImage(bytes)!;
 
-    final bytes = await event.file.readAsBytes();
+      Alignment _resolvedAlignment =
+          Alignment.center.resolve(TextDirection.ltr);
 
-    final image = imglib.decodeImage(bytes)!;
+      final Size target = Size(screenWidth, screenHeight);
 
-    // final scaleX = image.width / size;
-    //
-    // final scaleY = image.height / size;
-    //
-    // final scaleTop = top * scaleY;
-    //
-    // final scaleLeft = left * scaleX;
-    //
-    // final scaleSizeX = size * scaleX;
-    //
-    // final scaleSizeY = size * scaleY;
-    //
-    // final scaleRight = scaleLeft + scaleSizeX;
-    //
-    // final scaleBottom = scaleTop + scaleSizeY;
+      final Size childSize =
+          Size(image.width.toDouble(), image.height.toDouble());
 
+      final FittedSizes sizes = applyBoxFit(BoxFit.cover, childSize, target);
 
-    Alignment _resolvedAlignment = Alignment.center.resolve(TextDirection.ltr);
-    // final Size childSize = Size(screenWidth, screenHeight);
-    final Size target = Size(screenWidth, screenHeight);
-    // final Size target = Size(image.width.toDouble(), image.height.toDouble());
-    final Size childSize =
-        Size(image.width.toDouble(), image.height.toDouble());
-    final FittedSizes sizes = applyBoxFit(BoxFit.cover, childSize, target);
-    final double scaleX = sizes.destination.width / sizes.source.width;
-    final double scaleY = sizes.destination.height / sizes.source.height;
-    final Rect sourceRect =
-        _resolvedAlignment.inscribe(sizes.source, Offset.zero & childSize);
-    final Rect destinationRect =
-        _resolvedAlignment.inscribe(sizes.destination, Offset.zero & target);
+      final double scaleX = sizes.destination.width / sizes.source.width;
 
-    // double offsetLeft = left - destinationRect.left;
-    // offsetLeft = offsetLeft < 0 ? 0 : offsetLeft;
+      final double scaleY = sizes.destination.height / sizes.source.height;
 
-    double targetLeft = sourceRect.left + left * scaleX;
+      final Rect sourceRect =
+          _resolvedAlignment.inscribe(sizes.source, Offset.zero & childSize);
 
-    double targetRight = targetLeft + size * scaleX;
+      // final Rect destinationRect =
+      //     _resolvedAlignment.inscribe(sizes.destination, Offset.zero & target);
 
-    double targetTop = sourceRect.top + top * scaleY;
+      // double offsetLeft = left - destinationRect.left;
+      // offsetLeft = offsetLeft < 0 ? 0 : offsetLeft;
 
-    double targetBottom = targetTop + size * scaleY;
+      double targetLeft = sourceRect.left + left * (1 / scaleX);
 
-    final nativeImage = await _nativeOpencv.createImageFromBytes(bytes);
+      double targetRight = targetLeft + size * (1 / scaleX);
 
-    await _nativeOpencv.drawRect(
-      nativeImage,
-      CvRectangle(
-        width: (targetRight - targetLeft).toInt(),
-        height: (targetBottom - targetTop).toInt(),
-        x: targetLeft.toInt(),
-        y: targetTop.toInt(),
-      ),
-    );
+      double targetTop = sourceRect.top + top * (1 / scaleY);
 
-    final result = await _nativeOpencv.convertNativeImageToBytes(nativeImage);
+      double targetBottom = targetTop + size * (1 / scaleY);
 
-    await _nativeOpencv.dispose(nativeImage);
+      final nativeImage = await _nativeOpencv.createImageFromBytes(bytes);
 
-    emit(HomeScanComplete(state.data, result));
+      emit(
+        HomeScanInProgress(
+          state.data.copyWith(scanPercent: 20),
+        ),
+      );
 
-    // _completer?.complete();
+      await _nativeOpencv.drawRect(
+        nativeImage,
+        CvRectangle(
+          width: (targetRight - targetLeft).toInt(),
+          height: (targetBottom - targetTop).toInt(),
+          x: targetLeft.toInt(),
+          y: targetTop.toInt(),
+        ),
+      );
+
+      emit(
+        HomeScanInProgress(
+          state.data.copyWith(scanPercent: 40),
+        ),
+      );
+
+      final result = await _nativeOpencv.convertNativeImageToBytes(nativeImage);
+
+      emit(
+        HomeScanInProgress(
+          state.data.copyWith(scanPercent: 60),
+        ),
+      );
+
+      await _nativeOpencv.dispose(nativeImage);
+
+      emit(
+        HomeScanInProgress(
+          state.data.copyWith(scanPercent: 100),
+        ),
+      );
+
+      emit(HomeScanComplete(state.data.copyWith(scanPercent: 0), result));
+    } catch (e, _) {
+      emit(
+        HomeScanFailure(state.data.copyWith(scanPercent: 0), e.toString()),
+      );
+
+      try {
+        _cameraService.startImageStream();
+      } catch (_) {}
+    }
+
+    _completer?.complete();
   }
 
   FittedSizes applyBoxFit(BoxFit fit, Size inputSize, Size outputSize) {

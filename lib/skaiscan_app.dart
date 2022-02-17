@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:skaiscan/all_file/all_file.dart';
 import 'package:skaiscan/core/app_config.dart';
 import 'package:skaiscan/core/routes/routes_mapper.dart';
@@ -18,6 +19,18 @@ class _MyApp extends StatefulWidget {
 
 class _MyAppState extends State<_MyApp> {
   final _applicationBloc = ApplicationBloc();
+
+
+  @override
+  void initState() {
+    SystemChrome.setPreferredOrientations([
+      // DeviceOrientation.landscapeRight,
+      // DeviceOrientation.landscapeLeft,
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {

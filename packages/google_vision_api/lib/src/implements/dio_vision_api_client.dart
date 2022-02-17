@@ -86,7 +86,7 @@ ${options.data is Map ? json.encode(options.data) : options.data}
   ApiConfig get apiConfig => _config;
 
   @override
-  Future<Map<String, dynamic>> detectFaces(
+  Future<GoogleVisionResult<FaceAnnotation>> detectFaces(
       List<VisionRequest<FaceFeatureRequest>> requests) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
@@ -102,10 +102,10 @@ ${options.data is Map ? json.encode(options.data) : options.data}
 
       final data = response.data;
       if (data == null) {
-        throw Exception('');
+        throw Exception('Can not get data');
       }
 
-      return data;
+      return GoogleVisionResult<FaceAnnotation>.fromJson(data);
     } catch (e) {
       throw _getException(e);
     }

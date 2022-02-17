@@ -45,11 +45,11 @@ class JsonConvert<T> {
 final JsonConvert googleVisionJsonConvert = JsonConvert(
   configs: {
     FaceFeatureRequest: (json) => FaceFeatureRequest.fromJson(json),
+    FaceAnnotation: (json) => FaceAnnotation.fromJson(json),
   },
   serializeConfigs: {
     FaceFeatureRequest: (object) {
       return (object as FaceFeatureRequest).toJson();
     }
   },
-
 );

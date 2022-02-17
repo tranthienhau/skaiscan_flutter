@@ -3,6 +3,7 @@ import 'package:dotted_decoration/dotted_decoration.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
+import 'package:percent_indicator/percent_indicator.dart';
 import 'package:skaiscan/all_file/all_file.dart';
 import 'package:skaiscan/pages/home/bloc/home_bloc.dart';
 import 'package:skaiscan/services/camera_service.dart';
@@ -18,6 +19,14 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  late CameraService _cameraService;
+
+  @override
+  void initState() {
+    super.initState();
+    _cameraService = GetIt.I<CameraService>();
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -31,8 +40,32 @@ class _HomePageState extends State<HomePage> {
   Widget _buildBody() {
     return BlocConsumer<HomeBloc, HomeState>(
       listener: (context, state) {
-        if(state is HomeScanComplete){
+        if (state is HomeScanComplete) {
+          App.pop();
 
+          // showDialog<String>(
+          //   context: context,
+          //   builder: (BuildContext context) => AlertDialog(
+          //     contentPadding: EdgeInsets.zero,
+          //     insetPadding: EdgeInsets.zero,
+          //     actionsPadding: EdgeInsets.zero,
+          //     buttonPadding: EdgeInsets.zero,
+          //     titlePadding: EdgeInsets.zero,
+          //
+          //     title: const Text('AlertDialog Title'),
+          //     content: Image.memory(state.bytes),
+          //     actions: <Widget>[
+          //       TextButton(
+          //         onPressed: () => Navigator.pop(context, 'Cancel'),
+          //         child: const Text('Cancel'),
+          //       ),
+          //       TextButton(
+          //         onPressed: () => Navigator.pop(context, 'OK'),
+          //         child: const Text('OK'),
+          //       ),
+          //     ],
+          //   ),
+          // );
         }
       },
       builder: (context, state) {
@@ -74,6 +107,7 @@ class _CameraViewState extends State<CameraView> {
   @override
   void initState() {
     super.initState();
+
     _cameraService = GetIt.I<CameraService>();
 
     _initCamera();
@@ -81,6 +115,7 @@ class _CameraViewState extends State<CameraView> {
 
   Future<void> _initCamera() async {
     await _cameraService.startService(widget.description);
+    _cameraService.startImageStream();
     _controller = _cameraService.controller;
 
     setState(() {});
@@ -101,9 +136,9 @@ class _CameraViewState extends State<CameraView> {
       return const SizedBox();
     }
 
-    final scale = 1 /
-        (controller.value.aspectRatio *
-            MediaQuery.of(context).size.aspectRatio);
+    // final scale = 1 /
+    //     (controller.value.aspectRatio *
+    //         MediaQuery.of(context).size.aspectRatio);
 
     // return FittedBox();
     // return FittedSizes(source, destination);
@@ -126,7 +161,6 @@ class _CameraViewState extends State<CameraView> {
           Positioned(
             top: ViewUtils.getPercentHeight(percent: 0.1083),
             left: 27,
-            // bottom: 0,
             right: 27,
             child: Center(
               child: Container(
@@ -140,42 +174,41 @@ class _CameraViewState extends State<CameraView> {
               ),
             ),
           ),
-          // Positioned(
-          //   left: 0,
-          //   right: 0,
-          //   bottom: 0,
-          //   child: Container(
-          //     height: ViewUtils.getPercentHeight(percent: 0.307),
-          //     width: double.infinity,
-          //     color: Colors.black,
-          //   ),
-          // ),
-
-          // Positioned(
-          //   left: 0,
-          //   right: 0,
-          //   bottom: ViewUtils.getPercentHeight(percent: 0.0554),
-          //   child: SafeArea(
-          //     child: Text(
-          //       'Убедитесь что лицо в рамке и посмотрите в\nкамеру',
-          //       textAlign: TextAlign.center,
-          //       style: Theme.of(context).textTheme.bodyText1?.copyWith(
-          //             color: Colors.white,
-          //             fontWeight: FontWeight.w600,
-          //             fontSize: 15,
-          //           ),
-          //     ),
-          //   ),
-          // ),
-          //
           Positioned(
             left: 0,
             right: 0,
-            bottom: ViewUtils.getPercentHeight(percent: 0.0554),
-            child: SafeArea(
-              child: _buildButton(),
+            bottom: 0,
+            child: Container(
+              height: ViewUtils.getPercentHeight(percent: 0.307),
+              width: double.infinity,
+              color: Colors.black,
             ),
           ),
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: ViewUtils.getPercentHeight(percent: 0.0554),
+            child: SafeArea(
+              child: Text(
+                'Убедитесь что лицо в рамке и посмотрите в\nкамеру',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyText1?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
+              ),
+            ),
+          ),
+          //
+          // Positioned(
+          //   left: 16,
+          //   right: 16,
+          //   bottom: ViewUtils.getPercentHeight(percent: 0.0554),
+          //   child: SafeArea(
+          //     child: _buildButton(),
+          //   ),
+          // ),
         ],
       ),
     );
@@ -192,11 +225,56 @@ class _CameraViewState extends State<CameraView> {
         ],
       ),
       onPressed: () async {
+        try {
+          await _cameraService.stopImageStream();
+        } catch (_) {}
+
         final XFile? file = await _controller?.takePicture();
         if (file != null) {
+          _showProgressDialog(context, BlocProvider.of<HomeBloc>(context));
           BlocProvider.of<HomeBloc>(context).add(HomeAcneScan(file));
         }
       },
+    );
+  }
+
+  void _showProgressDialog(BuildContext context, HomeBloc homeBloc) {
+    showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) => AlertDialog(
+        contentPadding: const EdgeInsets.only(bottom: 20),
+        insetPadding: EdgeInsets.zero,
+        actionsPadding: EdgeInsets.zero,
+        buttonPadding: EdgeInsets.zero,
+        titlePadding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Center(
+          child: Text(
+            'Обработка',
+            style: Theme.of(context).textTheme.bodyText1?.copyWith(
+                  color: Colors.black,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 17,
+                ),
+          ),
+        ),
+        content: BlocBuilder<HomeBloc, HomeState>(
+          bloc: homeBloc,
+          builder: (context, state) {
+            return LinearPercentIndicator(
+              width: MediaQuery.of(context).size.width - 32,
+              lineHeight: 16.0,
+              animation: true,
+              animationDuration: 1000,
+              percent: state.data.scanPercent / 100,
+              progressColor: Theme.of(context).primaryColor,
+              backgroundColor: AppColors.primaryLight,
+              barRadius: const Radius.circular(16),
+            );
+          },
+        ),
+      ),
     );
   }
 }

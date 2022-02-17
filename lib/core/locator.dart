@@ -23,9 +23,9 @@ void _setupInDependentService() {
 
 /// Register the service that it is dependent on other services.
 void _setupDependentService() {
-  GetIt.I.registerLazySingleton<FaceDetectorService>(
-    () => FaceDetectorService(),
-  );
+  // GetIt.I.registerLazySingleton<FaceDetectorService>(
+  //   () => FaceDetectorService(),
+  // );
 
   GetIt.I.registerLazySingleton<CameraService>(
     () => CameraService(),

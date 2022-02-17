@@ -3,7 +3,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
-import 'package:google_ml_kit/google_ml_kit.dart';
+// import 'package:google_ml_kit/google_ml_kit.dart';
 import 'package:image/image.dart' as imglib;
 import 'package:skaiscan/services/image_converter.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
@@ -61,33 +61,33 @@ class MLService {
   // }
 
   //
-  Float32List? _preProcess(CameraImage image, Face faceDetected) {
-    imglib.Image? croppedImage = _cropFace(image, faceDetected);
+  // Float32List? _preProcess(CameraImage image, Face faceDetected) {
+  //   imglib.Image? croppedImage = _cropFace(image, faceDetected);
+  //
+  //   if(croppedImage == null){
+  //     return null;
+  //   }
+  //
+  //   imglib.Image img = imglib.copyResizeCropSquare(croppedImage, 112);
+  //
+  //   Float32List imageAsList = imageToByteListFloat32(img);
+  //   // imageAsList.buffer.asInt8List().toList()
+  //   return imageAsList;
+  // }
 
-    if(croppedImage == null){
-      return null;
-    }
-
-    imglib.Image img = imglib.copyResizeCropSquare(croppedImage, 112);
-
-    Float32List imageAsList = imageToByteListFloat32(img);
-    // imageAsList.buffer.asInt8List().toList()
-    return imageAsList;
-  }
-
-  imglib.Image? _cropFace(CameraImage image, Face faceDetected) {
-    imglib.Image? convertedImage = _convertCameraImage(image);
-    double x = faceDetected.boundingBox.left - 10.0;
-    double y = faceDetected.boundingBox.top - 10.0;
-    double w = faceDetected.boundingBox.width + 10.0;
-    double h = faceDetected.boundingBox.height + 10.0;
-    if (convertedImage == null) {
-      return null;
-    }
-
-    return imglib.copyCrop(
-        convertedImage, x.round(), y.round(), w.round(), h.round());
-  }
+  // imglib.Image? _cropFace(CameraImage image, Face faceDetected) {
+  //   imglib.Image? convertedImage = _convertCameraImage(image);
+  //   double x = faceDetected.boundingBox.left - 10.0;
+  //   double y = faceDetected.boundingBox.top - 10.0;
+  //   double w = faceDetected.boundingBox.width + 10.0;
+  //   double h = faceDetected.boundingBox.height + 10.0;
+  //   if (convertedImage == null) {
+  //     return null;
+  //   }
+  //
+  //   return imglib.copyCrop(
+  //       convertedImage, x.round(), y.round(), w.round(), h.round());
+  // }
 
   imglib.Image? _convertCameraImage(CameraImage image) {
     var img = convertToImage(image);

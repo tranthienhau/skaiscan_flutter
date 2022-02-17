@@ -25,21 +25,17 @@ class SkaiscanCameraPreview extends StatelessWidget {
                   ? controller.value.aspectRatio
                   : (1 / controller.value.aspectRatio);
 
-              return SizedBox(
-                width: MediaQuery.of(context).size.width,
-                height: MediaQuery.of(context).size.height,
-                child: FittedBox(
-                  fit: BoxFit.cover,
-                  child: SizedBox(
-                    width: MediaQuery.of(context).size.width*aspectRatio,
-                    height: MediaQuery.of(context).size.width,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: <Widget>[
-                        _wrapInRotatedBox(child: controller.buildPreview()),
-                        child ?? Container(),
-                      ],
-                    ),
+              return FittedBox(
+                fit: BoxFit.cover,
+                child: SizedBox(
+                  width: MediaQuery.of(context).size.width * aspectRatio,
+                  height: MediaQuery.of(context).size.width,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: <Widget>[
+                      _wrapInRotatedBox(child: controller.buildPreview()),
+                      child ?? Container(),
+                    ],
                   ),
                 ),
               );

@@ -1,7 +1,7 @@
 class VisionImageRequest {
-  String? content;
+  late final String content;
 
-  VisionImageRequest({this.content});
+  VisionImageRequest({required this.content});
 
   VisionImageRequest.fromJson(Map<String, dynamic> json) {
     content = json['content'];

@@ -29,5 +29,5 @@ abstract class VisionApiClient {
 
   ApiConfig get apiConfig;
 
-  Future<void> detectFaces(List<VisionRequest<FaceFeatureRequest>> requests);
+  Future<GoogleVisionResult<FaceAnnotation>> detectFaces(List<VisionRequest<FaceFeatureRequest>> requests);
 }

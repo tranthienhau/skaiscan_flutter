@@ -54,9 +54,9 @@ dependencies:
   timeago: ^3.2.2
   flutter_bloc: ^8.0.1
   dotted_decoration: ^2.0.0
-  google_ml_kit: ^0.7.3
   tflite_flutter: ^0.9.0
   image: ^3.1.1
+  percent_indicator: ^4.0.0
   skaiscan_localizations:
     path: ./packages/skaiscan_localizations
   skaiscan_log_service:

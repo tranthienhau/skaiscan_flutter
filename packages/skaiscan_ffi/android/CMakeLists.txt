@@ -22,5 +22,4 @@ target_link_libraries(native-lib
                       z
                       lib_opencv
                       android
-                      jnigraphics
                       log)
