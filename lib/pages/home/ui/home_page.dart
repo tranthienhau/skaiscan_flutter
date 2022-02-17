@@ -6,7 +6,9 @@ import 'package:get_it/get_it.dart';
 import 'package:skaiscan/all_file/all_file.dart';
 import 'package:skaiscan/pages/home/bloc/home_bloc.dart';
 import 'package:skaiscan/services/camera_service.dart';
+import 'package:skaiscan/widgets/button/common_primary_button.dart';
 import 'package:skaiscan/widgets/loading_indicator.dart';
+import 'package:skaiscan/widgets/skaiscan_camera_preview.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -27,7 +29,12 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildBody() {
-    return BlocBuilder<HomeBloc, HomeState>(
+    return BlocConsumer<HomeBloc, HomeState>(
+      listener: (context, state) {
+        if(state is HomeScanComplete){
+
+        }
+      },
       builder: (context, state) {
         final data = state.data;
 
@@ -45,9 +52,7 @@ class _HomePageState extends State<HomePage> {
   Widget _buildCameraView(CameraDescription cameraDescription) {
     return CameraView(
       description: cameraDescription,
-      onCaptured: (XFile file) async {
-
-      },
+      onCaptured: (XFile file) async {},
     );
   }
 }
@@ -70,12 +75,14 @@ class _CameraViewState extends State<CameraView> {
   void initState() {
     super.initState();
     _cameraService = GetIt.I<CameraService>();
+
     _initCamera();
   }
 
   Future<void> _initCamera() async {
     await _cameraService.startService(widget.description);
     _controller = _cameraService.controller;
+
     setState(() {});
   }
 
@@ -98,16 +105,24 @@ class _CameraViewState extends State<CameraView> {
         (controller.value.aspectRatio *
             MediaQuery.of(context).size.aspectRatio);
 
+    // return FittedBox();
+    // return FittedSizes(source, destination);
+
     return SizedBox(
-      width: double.infinity,
-      height: double.infinity,
+      width: MediaQuery.of(context).size.width,
+      height: MediaQuery.of(context).size.height,
       child: Stack(
         children: [
-          Transform.scale(
-            scale: scale,
-            alignment: Alignment.topCenter,
-            child: CameraPreview(controller),
+          SizedBox(
+            width: MediaQuery.of(context).size.width,
+            height: MediaQuery.of(context).size.height,
+            child: SkaiscanCameraPreview(controller),
           ),
+          // Transform.scale(
+          //   scale: scale,
+          //   alignment: Alignment.topCenter,
+          //   child: CameraPreview(controller),
+          // ),
           Positioned(
             top: ViewUtils.getPercentHeight(percent: 0.1083),
             left: 27,
@@ -125,34 +140,63 @@ class _CameraViewState extends State<CameraView> {
               ),
             ),
           ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              height: ViewUtils.getPercentHeight(percent: 0.307),
-              width: double.infinity,
-              color: Colors.black,
-            ),
-          ),
+          // Positioned(
+          //   left: 0,
+          //   right: 0,
+          //   bottom: 0,
+          //   child: Container(
+          //     height: ViewUtils.getPercentHeight(percent: 0.307),
+          //     width: double.infinity,
+          //     color: Colors.black,
+          //   ),
+          // ),
+
+          // Positioned(
+          //   left: 0,
+          //   right: 0,
+          //   bottom: ViewUtils.getPercentHeight(percent: 0.0554),
+          //   child: SafeArea(
+          //     child: Text(
+          //       'Убедитесь что лицо в рамке и посмотрите в\nкамеру',
+          //       textAlign: TextAlign.center,
+          //       style: Theme.of(context).textTheme.bodyText1?.copyWith(
+          //             color: Colors.white,
+          //             fontWeight: FontWeight.w600,
+          //             fontSize: 15,
+          //           ),
+          //     ),
+          //   ),
+          // ),
+          //
           Positioned(
             left: 0,
             right: 0,
             bottom: ViewUtils.getPercentHeight(percent: 0.0554),
             child: SafeArea(
-              child: Text(
-                'Убедитесь что лицо в рамке и посмотрите в\nкамеру',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyText1?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
-                    ),
-              ),
+              child: _buildButton(),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildButton() {
+    return CommonPrimaryButton(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Row(
+        mainAxisSize: MainAxisSize.max,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          Text('Сканировать'),
+        ],
+      ),
+      onPressed: () async {
+        final XFile? file = await _controller?.takePicture();
+        if (file != null) {
+          BlocProvider.of<HomeBloc>(context).add(HomeAcneScan(file));
+        }
+      },
     );
   }
 }

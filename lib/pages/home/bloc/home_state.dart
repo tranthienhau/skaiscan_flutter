@@ -1,10 +1,14 @@
 part of 'home_bloc.dart';
 
 class HomeData {
-  HomeData({required this.allowScan,required this.cameraDescriptionList});
+  HomeData({
+    required this.allowScan,
+    required this.cameraDescriptionList,
+  });
 
   final bool allowScan;
-  List<CameraDescription> cameraDescriptionList;
+  final List<CameraDescription> cameraDescriptionList;
+
 
   HomeData copyWith({
     bool? allowScan,
@@ -31,4 +35,10 @@ class HomeLoading extends HomeState {
 
 class HomeLoadSuccess extends HomeState {
   const HomeLoadSuccess(HomeData data) : super(data);
+}
+
+class HomeScanComplete extends HomeState {
+  const HomeScanComplete(HomeData data, this.bytes) : super(data);
+
+  final Uint8List bytes;
 }

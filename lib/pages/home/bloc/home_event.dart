@@ -7,4 +7,10 @@ class HomeScanEnabled extends HomeEvent {}
 
 class HomeCameraFaceDetected extends HomeEvent {}
 
+class HomeAcneScan extends HomeEvent {
+  final XFile file;
+
+  HomeAcneScan(this.file);
+}
+
 class HomeLoaded extends HomeEvent {}

@@ -46,6 +46,11 @@ public final class GeneratedPluginRegistrant {
       Log.e(TAG, "Error registering plugin permission_handler, com.baseflow.permissionhandler.PermissionHandlerPlugin", e);
     }
     try {
+      flutterEngine.getPlugins().add(new com.skaiscan.skaiscan_ffi.SkaiscanFfiPlugin());
+    } catch(Exception e) {
+      Log.e(TAG, "Error registering plugin skaiscan_ffi, com.skaiscan.skaiscan_ffi.SkaiscanFfiPlugin", e);
+    }
+    try {
       flutterEngine.getPlugins().add(new com.tfliteflutter.tflite_flutter_plugin.TfliteFlutterPlugin());
     } catch(Exception e) {
       Log.e(TAG, "Error registering plugin tflite_flutter, com.tfliteflutter.tflite_flutter_plugin.TfliteFlutterPlugin", e);

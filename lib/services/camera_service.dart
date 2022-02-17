@@ -15,10 +15,6 @@ class CameraService {
 
   InputImageRotation get cameraRotation => _cameraRotation;
 
-  String? _imagePath;
-
-  String? get imagePath => _imagePath;
-
   Stream<CameraImage> get cameraImageStream => _cameraStreamController.stream;
 
   CameraController get controller => _cameraController;
@@ -41,11 +37,17 @@ class CameraService {
 
     await _cameraController.initialize();
 
+    // Next, initialize the controller. This returns a Future.
+  }
+
+  void startImageStream() {
     _cameraController.startImageStream((image) async {
       _cameraStreamController.add(image);
     });
+  }
 
-    // Next, initialize the controller. This returns a Future.
+  void stopImageStream() {
+    _cameraController.stopImageStream();
   }
 
   InputImageRotation rotationIntToImageRotation(int rotation) {
@@ -63,7 +65,6 @@ class CameraService {
 
   Future<XFile> takePicture() async {
     XFile file = await _cameraController.takePicture();
-    _imagePath = file.path;
     return file;
   }
 
@@ -74,7 +75,7 @@ class CameraService {
     );
   }
 
-  dispose() {
-    _cameraController.dispose();
+  Future<void> dispose() {
+    return _cameraController.dispose();
   }
 }

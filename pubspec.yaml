@@ -65,6 +65,9 @@ dependencies:
     path: ./packages/skaiscan_api_client
   google_vision_api:
     path: ./packages/google_vision_api
+  skaiscan_ffi:
+    path: ./packages/skaiscan_ffi
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
