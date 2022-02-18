@@ -1,5 +1,4 @@
 import 'package:camera/camera.dart';
-import 'package:dotted_decoration/dotted_decoration.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
@@ -8,6 +7,7 @@ import 'package:skaiscan/all_file/all_file.dart';
 import 'package:skaiscan/pages/home/bloc/home_bloc.dart';
 import 'package:skaiscan/services/camera_service.dart';
 import 'package:skaiscan/widgets/button/common_primary_button.dart';
+import 'package:skaiscan/widgets/decoration/skaiscan_decoration.dart';
 import 'package:skaiscan/widgets/loading_indicator.dart';
 import 'package:skaiscan/widgets/skaiscan_camera_preview.dart';
 
@@ -40,9 +40,15 @@ class _HomePageState extends State<HomePage> {
   Widget _buildBody() {
     return BlocConsumer<HomeBloc, HomeState>(
       listener: (context, state) {
+        if (state is HomeScanFailure) {
+          App.pop();
+          return;
+        }
+
         if (state is HomeScanComplete) {
           App.pop();
 
+          return;
           // showDialog<String>(
           //   context: context,
           //   builder: (BuildContext context) => AlertDialog(
@@ -136,13 +142,6 @@ class _CameraViewState extends State<CameraView> {
       return const SizedBox();
     }
 
-    // final scale = 1 /
-    //     (controller.value.aspectRatio *
-    //         MediaQuery.of(context).size.aspectRatio);
-
-    // return FittedBox();
-    // return FittedSizes(source, destination);
-
     return SizedBox(
       width: MediaQuery.of(context).size.width,
       height: MediaQuery.of(context).size.height,
@@ -153,11 +152,6 @@ class _CameraViewState extends State<CameraView> {
             height: MediaQuery.of(context).size.height,
             child: SkaiscanCameraPreview(controller),
           ),
-          // Transform.scale(
-          //   scale: scale,
-          //   alignment: Alignment.topCenter,
-          //   child: CameraPreview(controller),
-          // ),
           Positioned(
             top: ViewUtils.getPercentHeight(percent: 0.1083),
             left: 27,
@@ -165,10 +159,11 @@ class _CameraViewState extends State<CameraView> {
             child: Center(
               child: Container(
                 width: MediaQuery.of(context).size.width,
-                height: MediaQuery.of(context).size.width - 54,
-                decoration: DottedDecoration(
-                  shape: Shape.box,
-                  dash: const <int>[3, 3],
+                height: (MediaQuery.of(context).size.width - 54) * 1.2,
+                decoration: const SkaiscanDottedDecoration(
+                  shape: SkaiscanShape.box,
+                  dash: <int>[1, 1],
+                  divideSpace: 8,
                   color: AppColors.dotLine,
                 ),
               ),
@@ -179,7 +174,7 @@ class _CameraViewState extends State<CameraView> {
             right: 0,
             bottom: 0,
             child: Container(
-              height: ViewUtils.getPercentHeight(percent: 0.307),
+              height: ViewUtils.getPercentHeight(percent: 0.2),
               width: double.infinity,
               color: Colors.black,
             ),
@@ -200,15 +195,6 @@ class _CameraViewState extends State<CameraView> {
               ),
             ),
           ),
-          //
-          // Positioned(
-          //   left: 16,
-          //   right: 16,
-          //   bottom: ViewUtils.getPercentHeight(percent: 0.0554),
-          //   child: SafeArea(
-          //     child: _buildButton(),
-          //   ),
-          // ),
         ],
       ),
     );
@@ -232,7 +218,7 @@ class _CameraViewState extends State<CameraView> {
         final XFile? file = await _controller?.takePicture();
         if (file != null) {
           _showProgressDialog(context, BlocProvider.of<HomeBloc>(context));
-          BlocProvider.of<HomeBloc>(context).add(HomeAcneScan(file));
+          BlocProvider.of<HomeBloc>(context).add(HomeAcneScanned(file));
         }
       },
     );
@@ -241,6 +227,7 @@ class _CameraViewState extends State<CameraView> {
   void _showProgressDialog(BuildContext context, HomeBloc homeBloc) {
     showDialog<String>(
       context: context,
+      barrierColor: Colors.black.withOpacity(0.8),
       barrierDismissible: false,
       builder: (BuildContext context) => AlertDialog(
         contentPadding: const EdgeInsets.only(bottom: 20),

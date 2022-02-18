@@ -19,6 +19,7 @@ class $AssetsFeatureGen {
 class $AssetsIconGen {
   const $AssetsIconGen();
 
+  SvgGenImage get cancel => const SvgGenImage('assets/icon/cancel.svg');
   SvgGenImage get cornersOut =>
       const SvgGenImage('assets/icon/corners_out.svg');
   SvgGenImage get logo => const SvgGenImage('assets/icon/logo.svg');

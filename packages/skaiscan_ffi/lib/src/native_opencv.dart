@@ -5,45 +5,9 @@ import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 import 'package:logger/logger.dart';
-import 'package:skaiscan_ffi/src/native_func.dart';
+import 'package:skaiscan_ffi/skaiscan_ffi.dart';
+import 'package:skaiscan_ffi/src/native_cv_func.dart';
 
-class NativeImageData {
-  final Pointer matPointer;
-  final Pointer<Int32> byteLength;
-
-  const NativeImageData({
-    required this.matPointer,
-    required this.byteLength,
-  });
-}
-
-class CvRectangle {
-  final int x;
-  final int y;
-  final int width;
-  final int height;
-
-  const CvRectangle({
-    required this.x,
-    required this.y,
-    required this.width,
-    required this.height,
-  });
-
-  CvRectangle copyWith({
-    int? x,
-    int? y,
-    int? width,
-    int? height,
-  }) {
-    return CvRectangle(
-      x: x ?? this.x,
-      y: y ?? this.y,
-      width: width ?? this.width,
-      height: height ?? this.height,
-    );
-  }
-}
 
 class NativeOpencv {
   static final NativeOpencv _instance = NativeOpencv._internal();
@@ -56,7 +20,7 @@ class NativeOpencv {
 
   final Logger logger = Logger();
 
-  Future<NativeImageData> createImageFromBytes(Uint8List bytes) async {
+  Future<NativeImage> createImageFromBytes(Uint8List bytes) async {
     Completer<Map<String, dynamic>?> _resultCompleter =
         Completer<Map<String, dynamic>?>();
 
@@ -97,7 +61,7 @@ class NativeOpencv {
     final Pointer<Int32> byteLength =
         Pointer.fromAddress(result['byteLengthAddress']);
 
-    final imageData = NativeImageData(
+    final imageData = NativeImage(
       byteLength: byteLength,
       matPointer: matPointer,
     );
@@ -107,12 +71,12 @@ class NativeOpencv {
     return imageData;
   }
 
-  Future<void> dispose(NativeImageData image) async {
+  Future<void> dispose(NativeImage image) async {
     malloc.free(image.matPointer);
     malloc.free(image.byteLength);
   }
 
-  Future<void> drawRect(NativeImageData image, CvRectangle rect) async {
+  Future<void> drawRect(NativeImage image, CvRectangle rect) async {
     Completer<Map<String, dynamic>?> _resultCompleter =
         Completer<Map<String, dynamic>?>();
 
@@ -154,7 +118,7 @@ class NativeOpencv {
     logger.i('Complete draw rect cv:Mat pointer');
   }
 
-  Future<Uint8List> convertNativeImageToBytes(NativeImageData image) async {
+  Future<Uint8List> convertNativeImageToBytes(NativeImage image) async {
     // throw Exception('Not implemented yet');
 
     Completer<Map<String, dynamic>?> _resultCompleter =
@@ -198,9 +162,11 @@ class NativeOpencv {
     return bytes;
   }
 
-  Future<NativeImageData> cloneImage() {
+  Future<NativeImage> cloneImage(NativeImage image) {
     throw Exception('Not implemented yet');
   }
+
+  Future<void> cropImage(NativeImage image, CvRectangle rect) async {}
 }
 
 void _convertMatPointerToBytes(Map<String, dynamic> data) {

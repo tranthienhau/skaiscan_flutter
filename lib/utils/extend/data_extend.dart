@@ -1,5 +1,8 @@
-import 'package:intl/intl.dart';
+import 'dart:ui';
 
+import 'package:intl/intl.dart';
+import 'package:skaiscan/all_file/all_file.dart';
+import 'package:skaiscan/model/acne.dart';
 
 import '../utils.dart';
 
@@ -175,6 +178,34 @@ extension RangeExtension on int {
       [for (int i = this; i <= maxInclusive; i += step) i];
 }
 
+extension AcneExtension on Acne {
+  Color get color {
+    switch (this) {
+      case Acne.papules:
+        return AppColors.papules;
+      case Acne.blackheads:
+        return AppColors.blackheads;
+      case Acne.pustules:
+        return AppColors.pustules;
+      case Acne.whiteheads:
+        return AppColors.whiteheads;
+    }
+  }
+
+  String get name {
+    switch (this) {
+      case Acne.papules:
+        return 'Закрытые Комедоны';
+      case Acne.blackheads:
+        return 'Открытые камедоны';
+      case Acne.pustules:
+        return 'Папулы';
+      case Acne.whiteheads:
+        return 'Пустулы';
+    }
+  }
+}
+
 extension DateTimeExtensions on DateTime {
   bool isSameDate(DateTime other) {
     return year == other.year && month == other.month && day == other.day;
@@ -205,5 +236,4 @@ extension DateTimeExtensions on DateTime {
 
     return TimeUtils.dateToStr(pureDataFormat);
   }
-
 }

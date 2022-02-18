@@ -39,7 +39,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     //     faceDetectorService ?? GetIt.I<FaceDetectorService>();
     // _faceDetectorService.initialize();
     on<HomeLoaded>(_onLoaded);
-    on<HomeAcneScan>(_onAcneScan);
+    on<HomeAcneScanned>(_onAcneScanned);
     on<HomeCameraFaceChecked>(_onCameraFaceChecked);
     _cameraStreamSubscription = _cameraService.cameraImageStream
         .listen((CameraImage cameraImage) async {
@@ -80,7 +80,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
       const left = 27;
 
-      final size = screenWidth - left * 2;
+      final sizeX = screenWidth - left * 2;
+      final sizeY = (screenWidth - left * 2) * 1.2;
 
       Alignment _resolvedAlignment =
           Alignment.center.resolve(TextDirection.ltr);
@@ -107,11 +108,11 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
       double targetLeft = sourceRect.left + left * (1 / scaleX);
 
-      double targetRight = targetLeft + size * (1 / scaleX);
+      double targetRight = targetLeft + sizeX * (1 / scaleX);
 
       double targetTop = sourceRect.top + top * (1 / scaleY);
 
-      double targetBottom = targetTop + size * (1 / scaleY);
+      double targetBottom = targetTop + sizeY * (1 / scaleY);
 
       _uiRectangle = Rectangle<int>(
         targetLeft.toInt(),
@@ -191,8 +192,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     _cameraCheckCompleter?.complete();
   }
 
-  Future<void> _onAcneScan(
-    HomeAcneScan event,
+  Future<void> _onAcneScanned(
+    HomeAcneScanned event,
     Emitter<HomeState> emit,
   ) async {
     await _completer?.future;
@@ -252,7 +253,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
       emit(
         HomeScanInProgress(
-          state.data.copyWith(scanPercent: 20),
+          state.data.copyWith(
+            scanPercent: 20,
+            captureBytes: bytes,
+          ),
         ),
       );
 
@@ -268,7 +272,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
       emit(
         HomeScanInProgress(
-          state.data.copyWith(scanPercent: 40),
+          state.data.copyWith(
+            scanPercent: 40,
+            captureBytes: bytes,
+          ),
         ),
       );
 
@@ -276,7 +283,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
       emit(
         HomeScanInProgress(
-          state.data.copyWith(scanPercent: 60),
+          state.data.copyWith(
+            scanPercent: 60,
+            captureBytes: bytes,
+          ),
         ),
       );
 
@@ -284,15 +294,29 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
       emit(
         HomeScanInProgress(
-          state.data.copyWith(scanPercent: 100),
+          state.data.copyWith(
+            scanPercent: 100,
+            captureBytes: bytes,
+          ),
         ),
       );
 
-      emit(HomeScanComplete(state.data.copyWith(scanPercent: 0), result));
+      emit(HomeScanComplete(
+          state.data.copyWith(
+            scanPercent: 0,
+            captureBytes: bytes,
+          ),
+          result));
     } catch (e, _) {
-      emit(
-        HomeScanFailure(state.data.copyWith(scanPercent: 0), e.toString()),
+      final data = state.data;
+
+      final newData = HomeData(
+        cameraDescriptionList: data.cameraDescriptionList,
+        allowScan: data.allowScan,
+        captureBytes: null,
+        scanPercent: 0,
       );
+      emit(HomeScanFailure(newData, e.toString()));
 
       try {
         _cameraService.startImageStream();

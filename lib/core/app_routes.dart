@@ -10,4 +10,6 @@ class AppRoutes {
 
   static const introduce = '/introduce';
 
+  static const scannedAcneResult = '/scannedAcneResult';
+
 }

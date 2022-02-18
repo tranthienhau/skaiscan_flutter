@@ -5,19 +5,23 @@ class HomeData {
     required this.allowScan,
     required this.cameraDescriptionList,
     this.scanPercent = 0,
+    this.captureBytes,
   });
 
   final bool allowScan;
   final List<CameraDescription> cameraDescriptionList;
   final int scanPercent;
+  final Uint8List? captureBytes;
 
   HomeData copyWith({
     bool? allowScan,
+    Uint8List? captureBytes,
     List<CameraDescription>? cameraDescriptionList,
     int? scanPercent,
   }) {
     return HomeData(
       allowScan: allowScan ?? this.allowScan,
+      captureBytes: captureBytes ?? this.captureBytes,
       scanPercent: scanPercent ?? this.scanPercent,
       cameraDescriptionList:
           cameraDescriptionList ?? this.cameraDescriptionList,
