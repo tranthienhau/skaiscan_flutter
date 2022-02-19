@@ -49,9 +49,7 @@ class HomeScanInProgress extends HomeState {
 }
 
 class HomeScanComplete extends HomeState {
-  const HomeScanComplete(HomeData data, this.bytes) : super(data);
-
-  final Uint8List bytes;
+  const HomeScanComplete(HomeData data) : super(data);
 }
 
 class HomeScanFailure extends HomeState {

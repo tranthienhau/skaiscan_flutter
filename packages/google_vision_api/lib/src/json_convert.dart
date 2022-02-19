@@ -33,7 +33,7 @@ class JsonConvert<T> {
 
   Map<String, dynamic> serialize(dynamic object) {
     if (serializeConfigs[object.runtimeType] != null) {
-      ConvertObjectToJson fun = serializeConfigs[T]!;
+      ConvertObjectToJson fun = serializeConfigs[object.runtimeType]!;
       Map<String, dynamic> result = fun(object);
       return result;
     }

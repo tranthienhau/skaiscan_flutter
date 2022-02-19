@@ -23,7 +23,7 @@ class VisionRequest<T> {
       'image': image.toJson(),
       'features': features.map(
         (feature) => googleVisionJsonConvert.serialize(feature),
-      ),
+      ).toList(),
     };
   }
 }

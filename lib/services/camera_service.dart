@@ -24,6 +24,7 @@ class CameraService {
       _cameraDescription,
       ResolutionPreset.high,
       enableAudio: false,
+      imageFormatGroup: ImageFormatGroup.bgra8888,
     );
 
     await _cameraController.initialize();

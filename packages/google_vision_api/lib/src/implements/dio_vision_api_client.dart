@@ -11,16 +11,16 @@ class DioVisionApiClient implements VisionApiClient {
     _dio = dio ?? Dio()
       ..transformer = IsolateTransformers();
     // _middleWareService = middleWareService ?? GetIt.I<MiddleWareService>();
-
+    _logService = logService ?? LoggerService('DioVisionApiClient');
     if (kDebugMode) {
       // final dataLogger = Logger(level: Level.debug);
-      final dataLogger = logService ?? LoggerService('DioVisionApiClient');
+      // final dataLogger = logService ?? LoggerService('DioVisionApiClient');
 
       _dio.interceptors.add(
         InterceptorsWrapper(
           onError: (DioError error, ErrorInterceptorHandler handler) {
             final options = error.requestOptions;
-            dataLogger.error(
+            _logService.error(
                 'DioApiClient Error',
                 '''
 Http error ${options.method}=========================================>
@@ -43,7 +43,7 @@ ${options.data}
           },
           onResponse: (Response response, ResponseInterceptorHandler handler) {
             final options = response.requestOptions;
-            dataLogger.info('''
+            _logService.info('''
 Http Response ${options.method}=========================================>
 ${options.baseUrl}${options.path}
 Headers ========================================================
@@ -61,7 +61,7 @@ ${response.data}
           },
           onRequest:
               (RequestOptions options, RequestInterceptorHandler handler) {
-            dataLogger.info('''
+                _logService.info('''
 Http ${options.method}=========================================>
 ${options.baseUrl}${options.path}
 Headers ========================================================
@@ -81,6 +81,7 @@ ${options.data is Map ? json.encode(options.data) : options.data}
 
   late ApiConfig _config;
   late Dio _dio;
+  late LogService _logService;
 
   @override
   ApiConfig get apiConfig => _config;
@@ -89,16 +90,17 @@ ${options.data is Map ? json.encode(options.data) : options.data}
   Future<GoogleVisionResult<FaceAnnotation>> detectFaces(
       List<VisionRequest<FaceFeatureRequest>> requests) async {
     try {
+      final requestData = {
+        'requests': requests.map(
+          (request) => request.toJson(),
+        ).toList()
+      };
+
       final response = await _dio.post<Map<String, dynamic>>(
-          '${_config.version}/images:annotate',
-          queryParameters: {
-            'key': _config.key
-          },
-          data: {
-            'requests': requests.map(
-              (request) => request.toJson(),
-            )
-          });
+        '/${_config.version}/images:annotate',
+        queryParameters: {'key': _config.key},
+        data: requestData,
+      );
 
       final data = response.data;
       if (data == null) {
@@ -106,7 +108,8 @@ ${options.data is Map ? json.encode(options.data) : options.data}
       }
 
       return GoogleVisionResult<FaceAnnotation>.fromJson(data);
-    } catch (e) {
+    } catch (e, stack) {
+      _logService.error('DetectFace error', e.toString(), stack);
       throw _getException(e);
     }
   }

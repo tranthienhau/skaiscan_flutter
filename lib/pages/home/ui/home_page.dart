@@ -47,8 +47,12 @@ class _HomePageState extends State<HomePage> {
 
         if (state is HomeScanComplete) {
           App.pop();
+          final result = state.data.captureBytes;
 
-          return;
+          if (result == null) {
+            return;
+          }
+          // return;
           // showDialog<String>(
           //   context: context,
           //   builder: (BuildContext context) => AlertDialog(
@@ -57,9 +61,8 @@ class _HomePageState extends State<HomePage> {
           //     actionsPadding: EdgeInsets.zero,
           //     buttonPadding: EdgeInsets.zero,
           //     titlePadding: EdgeInsets.zero,
-          //
           //     title: const Text('AlertDialog Title'),
-          //     content: Image.memory(state.bytes),
+          //     content: Image.memory(result),
           //     actions: <Widget>[
           //       TextButton(
           //         onPressed: () => Navigator.pop(context, 'Cancel'),
@@ -142,61 +145,75 @@ class _CameraViewState extends State<CameraView> {
       return const SizedBox();
     }
 
-    return SizedBox(
-      width: MediaQuery.of(context).size.width,
-      height: MediaQuery.of(context).size.height,
-      child: Stack(
-        children: [
-          SizedBox(
-            width: MediaQuery.of(context).size.width,
-            height: MediaQuery.of(context).size.height,
-            child: SkaiscanCameraPreview(controller),
-          ),
-          Positioned(
-            top: ViewUtils.getPercentHeight(percent: 0.1083),
-            left: 27,
-            right: 27,
-            child: Center(
-              child: Container(
+    return BlocBuilder<HomeBloc, HomeState>(
+      builder: (context, state) {
+        return SizedBox(
+          width: MediaQuery.of(context).size.width,
+          height: MediaQuery.of(context).size.height,
+          child: Stack(
+            children: [
+              SizedBox(
                 width: MediaQuery.of(context).size.width,
-                height: (MediaQuery.of(context).size.width - 54) * 1.2,
-                decoration: const SkaiscanDottedDecoration(
-                  shape: SkaiscanShape.box,
-                  dash: <int>[1, 1],
-                  divideSpace: 8,
-                  color: AppColors.dotLine,
+                height: MediaQuery.of(context).size.height,
+                child: SkaiscanCameraPreview(controller),
+              ),
+              Positioned(
+                top: ViewUtils.getPercentHeight(percent: 0.1083),
+                left: 27,
+                right: 27,
+                child: Center(
+                  child: Container(
+                    width: MediaQuery.of(context).size.width,
+                    height: (MediaQuery.of(context).size.width - 54) * 1.2,
+                    decoration: const SkaiscanDottedDecoration(
+                      shape: SkaiscanShape.box,
+                      dash: <int>[1, 1],
+                      divideSpace: 8,
+                      color: AppColors.dotLine,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              height: ViewUtils.getPercentHeight(percent: 0.2),
-              width: double.infinity,
-              color: Colors.black,
-            ),
-          ),
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: ViewUtils.getPercentHeight(percent: 0.0554),
-            child: SafeArea(
-              child: Text(
-                'Убедитесь что лицо в рамке и посмотрите в\nкамеру',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyText1?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
-                    ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  height: ViewUtils.getPercentHeight(percent: 0.2),
+                  width: double.infinity,
+                  color: Colors.black,
+                ),
               ),
-            ),
+              if (!state.data.allowScan)
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  bottom: ViewUtils.getPercentHeight(percent: 0.0554),
+                  child: SafeArea(
+                    child: Text(
+                      'Убедитесь что лицо в рамке и посмотрите в\nкамеру',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyText1?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                          ),
+                    ),
+                  ),
+                ),
+              if (state.data.allowScan)
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  bottom: ViewUtils.getPercentHeight(percent: 0.0554),
+                  child: SafeArea(
+                    child: _buildButton(),
+                  ),
+                ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 

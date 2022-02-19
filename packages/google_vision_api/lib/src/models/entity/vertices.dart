@@ -1,6 +1,6 @@
 class Vertices {
-  late final int x;
-  late final int y;
+  late final int? x;
+  late final int? y;
 
   Vertices({required this.x, required this.y});
 

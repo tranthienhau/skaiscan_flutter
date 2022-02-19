@@ -122,14 +122,16 @@ extern "C" {
 
 
     FUNCTION_ATTRIBUTE
-    unsigned char * convert_mat_to_bytes(void *src_ptr) {
+    unsigned char * convert_mat_to_bytes(void *src_ptr, int32_t *imgLengthBytes) {
          cv::Mat *src = (Mat *) src_ptr;
-          if (src == nullptr || src->data == nullptr)
+         if (src == nullptr || src->data == nullptr)
+         {
               return nullptr;
+         }
 
         std::vector<uchar> buf(1);
         cv::imencode(".bmp", *src, buf);
-//        *imgLengthBytes = buf.size();
+        *imgLengthBytes = buf.size();
 
         unsigned char *ret = (unsigned char *)malloc(buf.size());
         memcpy(ret, buf.data(), buf.size());
@@ -140,9 +142,54 @@ extern "C" {
     void *create_mat_pointer_from_path(char *inputImagePath) {
 
         Mat image = imread(inputImagePath, IMREAD_COLOR);
+
         Mat *matPointer = new Mat(image);
 
         return matPointer;
+    }
+
+    FUNCTION_ATTRIBUTE
+    unsigned char *rotate_90_counter_clockwise_flip_resize_bytes(unsigned char *bytes, int32_t *imgLengthBytes, int32_t* angle,
+    int32_t * width, int32_t * height){
+        cv::Mat *src = new Mat();
+        int32_t a = *imgLengthBytes;
+        std::vector<unsigned char> m;
+
+        while (a >= 0) {
+            m.push_back(*(bytes++));
+            a--;
+        }
+
+        *src = cv::imdecode(m, cv::IMREAD_UNCHANGED);
+        if (src->data == nullptr)
+            return nullptr;
+
+        platform_log("create_mat_pointer_from_bytes: len before:%d  len after:%d  width:%d  height:%d",
+                     *imgLengthBytes, src->step[0] * src->rows,
+                     src->cols, src->rows);
+
+        *imgLengthBytes = src->step[0] * src->rows;
+
+        rotate(*src, *src, ROTATE_90_COUNTERCLOCKWISE);
+
+        flip(*src, *src, 1);
+
+        if(*width != -1 && *height != -1) {
+           resize(*src, *src, Size(*width, *height), INTER_LINEAR);
+        }
+
+
+        std::vector<uchar> buf(1);
+        cv::imencode(".bmp", *src, buf);
+        *imgLengthBytes = buf.size();
+
+        unsigned char *ret = (unsigned char *)malloc(buf.size());
+        memcpy(ret, buf.data(), buf.size());
+
+        src->release();
+        delete src;
+
+        return ret;
     }
 
     FUNCTION_ATTRIBUTE
@@ -220,32 +267,32 @@ extern "C" {
 
    FUNCTION_ATTRIBUTE
    void* apply_acne_mask_color(void *src_ptr, void *origin_ptr) {
-        Mat *mask = (Mat *) src_ptr;
-
-        Mat *origin = (Mat *) origin_ptr;
-
-        Mat origin_bgra;
-
-        resize(origin, origin_bgra, mask->size(), INTER_LINEAR);
-
-        cvtColor(origin_bgra, origin_bgra, COLOR_BGR2BGRA);
-
-        Mat* result = new Mat();
-
-        *result = mask->clone();
-
-        apply_custom_color_map(*result, *result);
-
-        convert_black_to_transperant(*result);
-
-        GaussianBlur(result, result, Size(11, 11), 0);
-
-        addWeighted(result,
-                    0.4, origin_bgra, 1.0, 0, result);
-
-        origin_bgra.release();
-
-        return result;
+//        Mat *mask = (Mat *) src_ptr;
+//
+//        Mat *origin = (Mat *) origin_ptr;
+//
+//        Mat origin_bgra;
+//
+//        resize(origin, origin_bgra, mask->size(), INTER_LINEAR);
+//
+//        cvtColor(origin_bgra, origin_bgra, COLOR_BGR2BGRA);
+//
+//        Mat* result = new Mat();
+//
+//        *result = mask->clone();
+//
+//        apply_custom_color_map(*result, *result);
+//
+//        convert_black_to_transperant(*result);
+//
+//        GaussianBlur(result, result, Size(11, 11), 0);
+//
+//        addWeighted(result,
+//                    0.4, origin_bgra, 1.0, 0, result);
+//
+//        origin_bgra.release();
+//
+//        return result;
    }
 
 

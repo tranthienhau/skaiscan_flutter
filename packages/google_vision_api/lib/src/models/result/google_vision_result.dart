@@ -9,7 +9,7 @@ class GoogleVisionResult<T> {
     responses = <VisionResponse<T>>[];
     if (json['responses'] != null) {
       json['responses'].forEach((item) {
-        responses.add(VisionResponse<T>.fromJson(json));
+        responses.add(VisionResponse<T>.fromJson(item));
       });
     }
   }
