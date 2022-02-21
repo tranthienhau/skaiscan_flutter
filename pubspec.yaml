@@ -58,6 +58,7 @@ dependencies:
   synchronized: ^3.0.0
   async: ^2.8.2
   image: ^3.1.1
+  google_ml_kit: ^0.7.3
   percent_indicator: ^4.0.0
   dotted_border: ^2.0.0+2
   skaiscan_localizations:
@@ -66,11 +67,13 @@ dependencies:
     path: ./packages/skaiscan_log_service
   skaiscan_api_client:
     path: ./packages/skaiscan_api_client
-  google_vision_api:
-    path: ./packages/google_vision_api
+#  google_vision_api:
+#    path: ./packages/google_vision_api
   skaiscan_ffi:
     path: ./packages/skaiscan_ffi
-
+#  tflite_flutter_helper: ^0.3.1
+#  tflite:
+#    path: ./packages/flutter_tflite
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -83,6 +86,7 @@ dev_dependencies:
   flutter_lints: ^1.0.0
   flutter_gen_runner: ^3.0.2
   build_runner: ^2.0.6
+  change_app_package_name: ^1.0.0
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -96,7 +100,7 @@ flutter:
   assets:
     - assets/feature/
     - assets/icon/
-    - assets/model/
+#    - assets/model/
 
 flutter_gen:
   integrations:

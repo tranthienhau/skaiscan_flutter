@@ -52,7 +52,8 @@ class _HomePageState extends State<HomePage> {
           if (result == null) {
             return;
           }
-          // return;
+
+          //
           // showDialog<String>(
           //   context: context,
           //   builder: (BuildContext context) => AlertDialog(
@@ -75,6 +76,7 @@ class _HomePageState extends State<HomePage> {
           //     ],
           //   ),
           // );
+          //
         }
       },
       builder: (context, state) {
@@ -157,23 +159,42 @@ class _CameraViewState extends State<CameraView> {
                 height: MediaQuery.of(context).size.height,
                 child: SkaiscanCameraPreview(controller),
               ),
-              Positioned(
-                top: ViewUtils.getPercentHeight(percent: 0.1083),
-                left: 27,
-                right: 27,
-                child: Center(
-                  child: Container(
-                    width: MediaQuery.of(context).size.width,
-                    height: (MediaQuery.of(context).size.width - 54) * 1.2,
-                    decoration: const SkaiscanDottedDecoration(
-                      shape: SkaiscanShape.box,
-                      dash: <int>[1, 1],
-                      divideSpace: 8,
-                      color: AppColors.dotLine,
+              if (!state.data.allowScan)
+                Positioned(
+                  top: ViewUtils.getPercentHeight(percent: 0.1083),
+                  left: 27,
+                  right: 27,
+                  child: Center(
+                    child: Container(
+                      width: MediaQuery.of(context).size.width,
+                      height: (MediaQuery.of(context).size.width - 54) * 1.2,
+                      decoration: const SkaiscanDottedDecoration(
+                        shape: SkaiscanShape.box,
+                        dash: <int>[1, 1],
+                        divideSpace: 8,
+                        color: AppColors.dotLine,
+                      ),
                     ),
                   ),
                 ),
-              ),
+              if (state.data.allowScan)
+                Positioned(
+                  top: ViewUtils.getPercentHeight(percent: 0.1083),
+                  left: 27,
+                  right: 27,
+                  child: Center(
+                    child: Container(
+                      width: MediaQuery.of(context).size.width,
+                      height: (MediaQuery.of(context).size.width - 54) * 1.2,
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: AppColors.dotLine,
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               Positioned(
                 left: 0,
                 right: 0,
@@ -228,15 +249,15 @@ class _CameraViewState extends State<CameraView> {
         ],
       ),
       onPressed: () async {
-        try {
-          await _cameraService.stopImageStream();
-        } catch (_) {}
-
-        final XFile? file = await _controller?.takePicture();
-        if (file != null) {
-          _showProgressDialog(context, BlocProvider.of<HomeBloc>(context));
-          BlocProvider.of<HomeBloc>(context).add(HomeAcneScanned(file));
-        }
+        // try {
+        //   await _cameraService.stopImageStream();
+        // } catch (_) {}
+        //
+        // final XFile? file = await _controller?.takePicture();
+        // if (file != null) {
+        //   _showProgressDialog(context, BlocProvider.of<HomeBloc>(context));
+        //   BlocProvider.of<HomeBloc>(context).add(HomeAcneScanned(file));
+        // }
       },
     );
   }

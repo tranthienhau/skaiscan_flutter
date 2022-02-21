@@ -45,3 +45,11 @@ final Pointer<Uint8> Function(
                         Pointer<Int32>, Pointer<Int32>, Pointer<Int32>)>>(
             'rotate_90_counter_clockwise_flip_resize_bytes')
         .asFunction();
+
+final Pointer<Uint8> Function(Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>, int, int, int, int) createMatFromYUV420 =
+nativeLib
+    .lookup<
+    NativeFunction<
+        Pointer<Uint8> Function(Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>, Int32, Int32, Int32, Int32)>>(
+    'create_mat_from_yuv')
+    .asFunction();

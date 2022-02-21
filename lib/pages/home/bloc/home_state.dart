@@ -57,3 +57,9 @@ class HomeScanFailure extends HomeState {
 
   final String error;
 }
+
+class HomeLoadFailure extends HomeState {
+  const HomeLoadFailure(HomeData data, this.error) : super(data);
+
+  final String error;
+}

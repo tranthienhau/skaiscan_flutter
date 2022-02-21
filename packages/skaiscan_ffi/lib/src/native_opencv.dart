@@ -157,8 +157,74 @@ class NativeOpencv {
     return resultBytes;
   }
 
+  Future<Uint8List> getBytesYUV420({
+    required Uint8List yBytes,
+    required Uint8List uBytes,
+    required Uint8List vBytes,
+    required int bytesPerRow,
+    required int bytesPerPixel,
+    required int width,
+    required int height,
+  }) async {
+    final port = ReceivePort();
+
+    /// Spawning an isolate
+    Isolate.spawn<Map<String, dynamic>>(
+      _isolateCreateMatFromYUV420,
+      {
+        'yBytes': yBytes,
+        'uBytes': uBytes,
+        'vBytes': vBytes,
+        'bytesPerRow': bytesPerRow,
+        'bytesPerPixel': bytesPerPixel,
+        'width': width,
+        'height': height,
+        'sendPort': port.sendPort,
+      },
+      onError: port.sendPort,
+      // onExit: port.sendPort,
+    );
+
+    final Uint8List? resultBytes = await port.first as Uint8List?;
+
+    if (resultBytes == null) {
+      throw Exception('Can not create cv:Mat pointer');
+    }
+
+    return resultBytes;
+  }
+
 // Future<void> cropImage(NativeImage image, CvRectangle rect) async {}
 
+}
+
+void _isolateCreateMatFromYUV420(Map<String, dynamic> data) {
+  final Uint8List yBytes = data['yBytes'];
+  final Uint8List uBytes = data['uBytes'];
+  final Uint8List vBytes = data['vBytes'];
+  final int bytesPerRow = data['bytesPerRow'];
+  final int bytesPerPixel = data['bytesPerPixel'];
+  final int width = data['width'];
+  final int height = data['height'];
+  final SendPort sendPort = data['sendPort'];
+
+  Pointer<Uint8> p = malloc.allocate(yBytes.length);
+  Pointer<Uint8> p1 = malloc.allocate(uBytes.length);
+  Pointer<Uint8> p2 = malloc.allocate(vBytes.length);
+
+  Uint8List pointerList = p.asTypedList(yBytes.length);
+  Uint8List pointerList1 = p1.asTypedList(uBytes.length);
+  Uint8List pointerList2 = p2.asTypedList(vBytes.length);
+  pointerList.setRange(0, yBytes.length, yBytes);
+  pointerList1.setRange(0, uBytes.length, uBytes);
+  pointerList2.setRange(0, vBytes.length, vBytes);
+
+  Pointer<Uint8> imgP =
+      createMatFromYUV420(p, p1, p2, bytesPerRow, bytesPerPixel, width, height);
+
+  Uint8List imgData = imgP.asTypedList(width * height);
+
+  sendPort.send(imgData);
 }
 
 void _isolateRotate90CounterClockwiseFlipResize(Map<String, dynamic> data) {
@@ -168,7 +234,6 @@ void _isolateRotate90CounterClockwiseFlipResize(Map<String, dynamic> data) {
   final int resizeHeight = data['resizeHeight'];
 
   final SendPort sendPort = data['sendPort'];
-
 
   Pointer<Uint8> pointerImage = _intListToArray(bytes);
 
@@ -193,8 +258,6 @@ void _isolateRotate90CounterClockwiseFlipResize(Map<String, dynamic> data) {
     resizeWidthPointer,
     resizeHeightPointer,
   );
-
-
 
   Uint8List imageBytes = resultPointer.asTypedList(imgByteLength.value);
 

@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
+import 'package:google_ml_kit/google_ml_kit.dart';
 
 class CameraService {
   late CameraController _cameraController;
@@ -14,7 +15,9 @@ class CameraService {
   Stream<CameraImage> get cameraImageStream => _cameraStreamController.stream;
 
   CameraController get controller => _cameraController;
+  late InputImageRotation _cameraRotation;
 
+  InputImageRotation get cameraRotation => _cameraRotation;
   final StreamController<CameraImage> _cameraStreamController =
       StreamController<CameraImage>.broadcast();
 
@@ -26,6 +29,9 @@ class CameraService {
       enableAudio: false,
       imageFormatGroup: ImageFormatGroup.bgra8888,
     );
+
+    _cameraRotation =
+        rotationIntToImageRotation(cameraDescription.sensorOrientation);
 
     await _cameraController.initialize();
     await _cameraController
@@ -53,6 +59,19 @@ class CameraService {
       _cameraController.value.previewSize?.height ?? 0,
       _cameraController.value.previewSize?.width ?? 0,
     );
+  }
+
+  InputImageRotation rotationIntToImageRotation(int rotation) {
+    switch (rotation) {
+      case 90:
+        return InputImageRotation.Rotation_90deg;
+      case 180:
+        return InputImageRotation.Rotation_180deg;
+      case 270:
+        return InputImageRotation.Rotation_270deg;
+      default:
+        return InputImageRotation.Rotation_0deg;
+    }
   }
 
   Future<void> dispose() {

@@ -7,18 +7,20 @@ import 'dart:typed_data';
 
 import 'package:bloc/bloc.dart';
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
-import 'package:google_vision_api/google_vision_api.dart';
+
+// import 'package:google_vision_api/google_vision_api.dart';
 import 'package:image/image.dart' as imglib;
 import 'package:image/image.dart';
 import 'package:skaiscan/services/acne_scan/acne_scan_service.dart';
 import 'package:skaiscan/services/camera_service.dart';
+import 'package:skaiscan/services/face_detection_service.dart';
 import 'package:skaiscan/services/image_converter.dart';
 import 'package:skaiscan/utils/utils.dart';
 import 'package:skaiscan_ffi/skaiscan_ffi.dart';
 import 'package:skaiscan_log_service/skaiscan_log_service.dart';
-import 'package:synchronized/synchronized.dart';
 
 part 'home_event.dart';
 
@@ -28,9 +30,11 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   HomeBloc({
     CameraService? cameraService,
     // FaceDetectorService? faceDetectorService,
-    VisionApiClient? visionApiClient,
+    // VisionApiClient? visionApiClient,
     AcneScanService? acneScanService,
     LogService? logService,
+    // MLService? mlService,
+    FaceDetectorService? faceDetectorService,
   }) : super(
           HomeLoading(
             HomeData(
@@ -39,37 +43,52 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
             ),
           ),
         ) {
+    _faceDetectorService = faceDetectorService ?? FaceDetectorService();
     _cameraService = cameraService ?? GetIt.I<CameraService>();
     _acneScanService = acneScanService ?? GetIt.I<AcneScanService>();
-    _visionApiClient = visionApiClient ?? GetIt.I<VisionApiClient>();
+    // _visionApiClient = visionApiClient ?? GetIt.I<VisionApiClient>();
     _logService = logService ?? LoggerService('HomeBloc');
+    // _mlService = mlService ?? MLService();
     // _faceDetectorService =
     //     faceDetectorService ?? GetIt.I<FaceDetectorService>();
-    // _faceDetectorService.initialize();
+    _faceDetectorService.initialize();
     on<HomeLoaded>(_onLoaded);
     on<HomeAcneScanned>(_onAcneScanned);
     on<HomeCameraFaceChecked>(_onCameraFaceChecked);
     _cameraStreamSubscription = _cameraService.cameraImageStream
         .listen((CameraImage cameraImage) async {
+      _cameraImage = cameraImage;
       if (_cameraCheckCompleter?.isCompleted ?? true) {
         add(HomeCameraFaceChecked(cameraImage));
       }
     });
   }
 
-  final _lock = Lock();
+  // final _lock = Lock();
 
   final _nativeOpencv = NativeOpencv();
   late CameraService _cameraService;
+  late CameraImage _cameraImage;
   late StreamSubscription _cameraStreamSubscription;
   late LogService _logService;
+  late FaceDetectorService _faceDetectorService;
+
+  // late MLService _mlService;
 
   // late FaceDetectorService _faceDetectorService;
-  late VisionApiClient _visionApiClient;
+  // late VisionApiClient _visionApiClient;
   late AcneScanService _acneScanService;
   Completer<void>? _completer;
   Completer<void>? _cameraCheckCompleter;
   Rectangle<int>? _uiRectangle;
+
+  Uint8List concatenatePlanes(List<Plane> planes) {
+    final WriteBuffer allBytes = WriteBuffer();
+    for (final plane in planes) {
+      allBytes.putUint8List(plane.bytes);
+    }
+    return allBytes.done().buffer.asUint8List();
+  }
 
   Future<void> _onCameraFaceChecked(
     HomeCameraFaceChecked event,
@@ -89,50 +108,116 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     }
 
     try {
-      final receivePort = ReceivePort();
+      // final bytes = event.cameraImage.planes[0].bytes;
+      // final bytes = concatenatePlanes(event.cameraImage.planes);
+      //
+      // final resultBytes =
+      //     await _nativeOpencv.rotate90CounterClockwiseFlipResize(
+      //   // bytes: Uint8List.fromList(bytes),
+      //   bytes: bytes,
+      //   flip: 1,
+      //   resizeWidth: event.cameraImage.height,
+      //   resizeHeight: event.cameraImage.width,
+      // );
 
-      await Isolate.spawn(
-        _decodeIsolate,
-        DecodeParam(
-          image: event.cameraImage,
-          sendPort: receivePort.sendPort,
-        ),
+//       final receivePort = ReceivePort();
+// //
+//
+//       await Isolate.spawn(
+//         _base64decodeIsolate,
+//         DecodeBase64Param(
+//           bytes: resultBytes,
+//           sendPort: receivePort.sendPort,
+//         ),
+//       );
+//       String decodeBase64 = await receivePort.first as String;
+
+      // imglib.Image? image = convertToImage(event.cameraImage);
+      // if (image == null) {
+      //   return;
+      // }
+      // final rotateImage = imglib.copyRotate(image, -90);
+      // final flipOutputImage = imglib.flipHorizontal(rotateImage);
+
+      // var image = decodeImage(resultBytes)!;
+
+      final resultBytes = await _nativeOpencv.getBytesYUV420(
+        yBytes: event.cameraImage.planes[0].bytes,
+        uBytes: event.cameraImage.planes[1].bytes,
+        vBytes: event.cameraImage.planes[2].bytes,
+        bytesPerRow: event.cameraImage.planes[1].bytesPerRow,
+        bytesPerPixel: event.cameraImage.planes[1].bytesPerPixel ?? 1,
+        width: event.cameraImage.planes[0].bytesPerRow,
+        height: event.cameraImage.height,
       );
 
-      Stopwatch stopwatch = Stopwatch();
-      print(stopwatch.elapsedMilliseconds); // 0
-      print(stopwatch.isRunning); // false
-      stopwatch.start();
-      print(stopwatch.isRunning); // true
+      final faces =
+          await _faceDetectorService.getFacesFromImage(event.cameraImage);
+      if (faces.isNotEmpty) {
+        final face = faces.first;
 
-      final bytes = event.cameraImage.planes[0].bytes;
+        final isContain = _uiRectangle?.containsRectangle(
+              Rectangle(
+                face.boundingBox.left,
+                face.boundingBox.top,
+                face.boundingBox.width,
+                face.boundingBox.height,
+              ),
+            ) ??
+            false;
 
-      imglib.Image? image = convertToImage(event.cameraImage);
-
-      if (image == null) {
-        throw Exception('Can not convert image');
+        print('isContain : $isContain');
+        if (isContain) {
+          emit(
+            HomeLoadSuccess(
+              state.data.copyWith(allowScan: true),
+            ),
+          );
+        } else {
+          emit(
+            HomeLoadSuccess(
+              state.data.copyWith(
+                allowScan: false,
+              ),
+            ),
+          );
+        }
       }
+      // await _mlService.detectFace(flipOutputImage);
 
-      final pngBytes = imglib.encodePng(image);
-      await _nativeOpencv.rotate90CounterClockwiseFlipResize(
-        bytes: Uint8List.fromList(pngBytes),
-        flip: 1,
-        resizeWidth: -1,
-        resizeHeight: -1,
-      );
-
+      //   event.cameraImage.height,
+      // event.cameraImage.width,
       // _nativeOpencv.createImageFromBytes(event.cameraImage.planes[0].bytes);
-      stopwatch.stop();
-      print('elapsed: ${stopwatch.elapsed.inMilliseconds}');
-      print(stopwatch.isRunning); // false
-      Duration elapsed = stopwatch.elapsed;
+      // stopwatch.stop();
+      // print('native elapsed: ${stopwatch.elapsed.inMilliseconds}');
+      // print(stopwatch.isRunning); // false
+      // Duration elapsed = stopwatch.elapsed;
 
-      DecodeResult? decodeResult = await receivePort.first as DecodeResult?;
+      // final receivePort = ReceivePort();
 
-      if (decodeResult == null) {
-        throw Exception('Can not convert camera image to dart image');
-      }
+      // stopwatch = Stopwatch();
+      // print(stopwatch.elapsedMilliseconds); // 0
+      // print(stopwatch.isRunning); // false
+      // stopwatch.start();
+      // print(stopwatch.isRunning); //
 
+      // await Isolate.spawn(
+      //   _decodeIsolate,
+      //   DecodeParam(
+      //     image: event.cameraImage,
+      //     sendPort: receivePort.sendPort,
+      //   ),
+      // );
+      //
+      // DecodeResult? decodeResult = await receivePort.first as DecodeResult?;
+      //
+      // if (decodeResult == null) {
+      //   throw Exception('Can not convert camera image to dart image');
+      // }
+      // stopwatch.stop();
+      // print('elapsed: ${stopwatch.elapsed.inMilliseconds}');
+      // print(stopwatch.isRunning); // false
+      // elapsed = stopwatch.elapsed;
       //
       // emit(
       //   HomeScanComplete(
@@ -142,135 +227,17 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       //   ),
       // );
 
-      final List<VisionRequest<FaceFeatureRequest>> requests = [
-        VisionRequest<FaceFeatureRequest>(
-          image: VisionImageRequest(content: decodeResult.base64Image),
-          features: <FaceFeatureRequest>[
-            FaceFeatureRequest(
-              type: 'FACE_DETECTION',
-              maxResults: 1,
-            )
-          ],
-        )
-      ];
+      // emit(
+      //   HomeScanComplete(
+      //     state.data.copyWith(
+      //       scanPercent: 0,
+      //       captureBytes: resultBytes,
+      //     ),
+      //   ),
+      // );
 
-      stopwatch = Stopwatch();
-      print(stopwatch.elapsedMilliseconds); // 0
-      print(stopwatch.isRunning); // false
-      stopwatch.start();
-      print(stopwatch.isRunning); // tr
-
-      final GoogleVisionResult<FaceAnnotation> result =
-          await _visionApiClient.detectFaces(requests);
-
-      stopwatch.stop();
-      print('elapsed: ${stopwatch.elapsed.inMilliseconds}');
-      print(stopwatch.isRunning); // false
-      elapsed = stopwatch.elapsed;
-
-      if (result.responses.isNotEmpty) {
-        final faceAnnotations = result.responses.first.faceAnnotations;
-
-        if (faceAnnotations.isNotEmpty) {
-          final faceAnnotation = faceAnnotations.first;
-          final fdBoundingPoly = faceAnnotation.fdBoundingPoly;
-
-          if (fdBoundingPoly != null &&
-              fdBoundingPoly.verticesList.isNotEmpty) {
-            int minX = -1;
-            int maxX = -1;
-            int minY = -1;
-            int maxY = -1;
-
-            for (final vertices in fdBoundingPoly.verticesList) {
-              final x = vertices.x;
-              final y = vertices.y;
-
-              if (x == null || y == null) {
-                throw Exception('Can not find boundingPoly in face');
-              }
-
-              if (minX == -1) {
-                minX = x;
-              } else if (minX > x) {
-                minX = x;
-              }
-
-              if (maxX == -1) {
-                maxX = x;
-              } else if (maxX < x) {
-                maxX = x;
-              }
-
-              if (minY == -1) {
-                minY = y;
-              } else if (minY > y) {
-                minY = y;
-              }
-
-              if (maxY == -1) {
-                maxY = y;
-              } else if (maxY < y) {
-                maxY = y;
-              }
-            }
-
-            Rectangle<int> rectangle = Rectangle<int>(
-              minX,
-              minY,
-              maxX - minX,
-              maxY - minY,
-            );
-
-            final intersection = _uiRectangle?.intersection(rectangle);
-
-            final isContain =
-                _uiRectangle?.containsRectangle(rectangle) ?? false;
-
-            if (isContain && !state.data.allowScan) {
-              emit(
-                HomeLoadSuccess(
-                  state.data.copyWith(allowScan: true),
-                ),
-              );
-
-              _cameraCheckCompleter?.complete();
-
-              return;
-            }
-
-            //
-            // NativeImage nativeImage =
-            //     await _nativeOpencv.createImageFromBytes(decodeResult.bytes);
-            //
-            // await _nativeOpencv.drawRect(
-            //   nativeImage,
-            //   CvRectangle(
-            //     y: rectangle.top,
-            //     x: rectangle.left,
-            //     height: rectangle.height,
-            //     width: rectangle.width,
-            //   ),
-            // );
-            //
-            // await _nativeOpencv.drawRect(
-            //   nativeImage,
-            //   CvRectangle(
-            //     y: regionRectangle.top,
-            //     x: regionRectangle.left,
-            //     height: regionRectangle.height,
-            //     width: regionRectangle.width,
-            //   ),
-            // );
-            //
-            // final resultBytes =
-            //     await _nativeOpencv.convertNativeImageToBytes(nativeImage);
-            //
-            // await _nativeOpencv.release(nativeImage);
-
-          }
-        }
-      }
+      _cameraCheckCompleter?.complete();
+      return;
     } catch (e, stack) {
       _logService.error('Detect face error', e.toString(), stack);
     }
@@ -299,158 +266,40 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     // final image = imglib.decodeImage(bytes)!;
     await _acneScanService.select(bytes);
     final acneBytes = await _acneScanService.getAcneBytes();
-    print('compelte');
-    // await _completer?.future;
-    //
-    // _completer = Completer<void>();
-    //
-    //
-    // try {
-    //   ///calculate rectangle in camera
-    //   final top = ViewUtils.getPercentHeight(percent: 0.1083);
-    //
-    //   final screenWidth = ViewUtils.getPercentWidth(percent: 1.0);
-    //
-    //   final screenHeight = ViewUtils.getPercentHeight(percent: 1.0);
-    //
-    //   const left = 27;
-    //
-    //   final size = screenWidth - left * 2;
-    //
-    //
-    //   // String base64Image = base64Encode(bytes);
-    //
-    //
-    //
-    //   Alignment _resolvedAlignment =
-    //       Alignment.center.resolve(TextDirection.ltr);
-    //
-    //   final Size target = Size(screenWidth, screenHeight);
-    //
-    //   final Size childSize =
-    //       Size(image.width.toDouble(), image.height.toDouble());
-    //
-    //   final FittedSizes sizes = applyBoxFit(BoxFit.cover, childSize, target);
-    //
-    //   final double scaleX = sizes.destination.width / sizes.source.width;
-    //
-    //   final double scaleY = sizes.destination.height / sizes.source.height;
-    //
-    //   final Rect sourceRect =
-    //       _resolvedAlignment.inscribe(sizes.source, Offset.zero & childSize);
-    //
-    //   // final Rect destinationRect =
-    //   //     _resolvedAlignment.inscribe(sizes.destination, Offset.zero & target);
-    //
-    //   // double offsetLeft = left - destinationRect.left;
-    //   // offsetLeft = offsetLeft < 0 ? 0 : offsetLeft;
-    //
-    //   double targetLeft = sourceRect.left + left * (1 / scaleX);
-    //
-    //   double targetRight = targetLeft + size * (1 / scaleX);
-    //
-    //   double targetTop = sourceRect.top + top * (1 / scaleY);
-    //
-    //   double targetBottom = targetTop + size * (1 / scaleY);
-    //
-    //   final nativeImage = await _nativeOpencv.createImageFromBytes(bytes);
-    //
-    //   emit(
-    //     HomeScanInProgress(
-    //       state.data.copyWith(
-    //         scanPercent: 20,
-    //         captureBytes: bytes,
-    //       ),
-    //     ),
-    //   );
-    //
-    //   await _nativeOpencv.drawRect(
-    //     nativeImage,
-    //     CvRectangle(
-    //       width: (targetRight - targetLeft).toInt(),
-    //       height: (targetBottom - targetTop).toInt(),
-    //       x: targetLeft.toInt(),
-    //       y: targetTop.toInt(),
-    //     ),
-    //   );
-    //
-    //   emit(
-    //     HomeScanInProgress(
-    //       state.data.copyWith(
-    //         scanPercent: 40,
-    //         captureBytes: bytes,
-    //       ),
-    //     ),
-    //   );
-    //
-    //   final result = await _nativeOpencv.convertNativeImageToBytes(nativeImage);
-    //
-    //   emit(
-    //     HomeScanInProgress(
-    //       state.data.copyWith(
-    //         scanPercent: 60,
-    //         captureBytes: bytes,
-    //       ),
-    //     ),
-    //   );
-    //
-    //   await _nativeOpencv.dispose(nativeImage);
-    //
-    //   emit(
-    //     HomeScanInProgress(
-    //       state.data.copyWith(
-    //         scanPercent: 100,
-    //         captureBytes: bytes,
-    //       ),
-    //     ),
-    //   );
-    //
-    //   emit(HomeScanComplete(
-    //       state.data.copyWith(
-    //         scanPercent: 0,
-    //         captureBytes: bytes,
-    //       ),
-    //       result));
-    // } catch (e, _) {
-    //   final data = state.data;
-    //
-    //   final newData = HomeData(
-    //     cameraDescriptionList: data.cameraDescriptionList,
-    //     allowScan: data.allowScan,
-    //     captureBytes: null,
-    //     scanPercent: 0,
-    //   );
-    //   emit(HomeScanFailure(newData, e.toString()));
-    //
-    //   try {
-    //     _cameraService.startImageStream();
-    //   } catch (_) {}
-    // }
-    //
-    // _completer?.complete();
   }
 
   Future<void> _onLoaded(
     HomeLoaded event,
     Emitter<HomeState> emit,
   ) async {
-    List<CameraDescription> cameras = await availableCameras();
+    try {
+      List<CameraDescription> cameras = await availableCameras();
 
-    _visionApiClient.setApiConfig(ApiConfig(
-      url: 'https://vision.googleapis.com',
-      key: 'AIzaSyBOUAUQY1RRRqhR1vhXRDjZ3axMtvXUtbc',
-      version: 'v1',
-    ));
+      // _visionApiClient.setApiConfig(ApiConfig(
+      //   url: 'https://vision.googleapis.com',
+      //   key: 'AIzaSyBOUAUQY1RRRqhR1vhXRDjZ3axMtvXUtbc',
+      //   version: 'v1',
+      // ));
 
-    await _acneScanService.init();
-
-    emit(
-      HomeLoadSuccess(
-        state.data.copyWith(
-          cameraDescriptionList: cameras,
+      await _acneScanService.init();
+      // await _mlService.loadModel();
+      emit(
+        HomeLoadSuccess(
+          state.data.copyWith(
+            cameraDescriptionList: cameras,
+          ),
         ),
-      ),
-    );
+      );
+    } catch (e, stack) {
+      emit(
+        HomeLoadFailure(
+          state.data,
+          e.toString(),
+        ),
+      );
+
+      _logService.error('HomeLoadFailure', e.toString(), stack);
+    }
   }
 
   FittedSizes applyBoxFit(BoxFit fit, Size inputSize, Size outputSize) {
@@ -530,17 +379,18 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
   void _calculateCropRectInImage(int originWidth, int originHeight) {
     ///calculate rectangle in camera
-    final top = ViewUtils.getPercentHeight(percent: 0.1083);
+    final top = ViewUtils.getPercentHeight(percent: 0.1083) - 12;
 
     final screenWidth = ViewUtils.getPercentWidth(percent: 1.0);
 
     final screenHeight = ViewUtils.getPercentHeight(percent: 1.0);
 
-    const left = 27;
+    // const left = 27;
+    const left = 15;
 
     final sizeX = screenWidth - left * 2;
 
-    final sizeY = (screenWidth - left * 2) * 1.2;
+    final sizeY = (screenWidth - left * 2) * 1.2 + 12;
 
     Alignment _resolvedAlignment = Alignment.center.resolve(TextDirection.ltr);
 
@@ -626,4 +476,20 @@ void _decodeIsolate(DecodeParam param) {
     bytes: pngBytes,
     base64Image: base64Image,
   ));
+}
+
+class DecodeBase64Param {
+  final Uint8List bytes;
+  final SendPort sendPort;
+
+  DecodeBase64Param({
+    required this.bytes,
+    required this.sendPort,
+  });
+}
+
+void _base64decodeIsolate(DecodeBase64Param param) {
+  final base64Image = base64.encode(param.bytes);
+
+  param.sendPort.send(base64Image);
 }

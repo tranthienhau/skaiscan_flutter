@@ -7,11 +7,13 @@ import 'package:tflite_flutter/tflite_flutter.dart';
 
 import 'acne_scan_service.dart';
 
+const OUT_PUT_SIZE = 1024;
+
 class TfAcneScanService implements AcneScanService {
   late imglib.Image _image;
   Float32List? _float32Bytes;
-  late Interpreter interpreter;
-  final _outputSize = 512;
+  late Interpreter _interpreter;
+  final _outputSize = OUT_PUT_SIZE;
 
   @override
   Future<void> init() async {
@@ -20,11 +22,10 @@ class TfAcneScanService implements AcneScanService {
     options.threads = 2;
     // options.useNnApiForAndroid = true;
 
-
-    // interpreter = await Interpreter.fromAsset(
-    //   'model/model.tflite',
-    //   options: options,
-    // );
+    // _interpreter =
+    //     await Interpreter.fromAsset('model/model_1024.tflite', options: options);
+    // Tensor inputTensor = _interpreter.getInputTensor(0);
+    // Tensor outputTensor = _interpreter.getOutputTensor(0);
 
     // final gpuDelegateV2 = GpuDelegateV2(
     //     options: GpuDelegateOptionsV2(
@@ -36,8 +37,8 @@ class TfAcneScanService implements AcneScanService {
     // ));
 
     // var interpreterOptions = InterpreterOptions()..addDelegate(gpuDelegateV2);
-    // interpreter = await Interpreter.fromAsset('model/model2.tflite',
-    //     options: interpreterOptions);
+    // _interpreter = await Interpreter.fromAsset('model/model2.tflite',
+    //     options: options);
 
     // Tensor tensor = interpreter.getOutputTensor(0);
     // final outputTensor =
@@ -62,7 +63,9 @@ class TfAcneScanService implements AcneScanService {
     //   ),
     // ];
 
-    List inputReshape = float32Bytes.reshape(<int>[1, 512, 512, 3]);
+    List inputReshape =
+        float32Bytes.reshape(<int>[1, _outputSize, _outputSize, 3]);
+
     // final recognitions = await Tflite.runModelOnBinary(
     //     binary: float32Bytes.buffer.asUint8List(),// required
     //     // numResults: 6,    // defaults to 5
@@ -70,6 +73,7 @@ class TfAcneScanService implements AcneScanService {
     //     // asynch: true      // defaults to true
     // );
     //
+
     // return Uint8List.fromList([]);
     Completer<Uint8List> _resultCompleter = Completer<Uint8List>();
 
@@ -79,8 +83,8 @@ class TfAcneScanService implements AcneScanService {
       _isolateAcneScan,
       {
         'input': inputReshape,
-        'inputSize': 512,
-        'interpreter': interpreter.address,
+        'inputSize': _outputSize,
+        'interpreter': _interpreter.address,
         'originImage': _image,
         // 'output': outputData,
         'sendPort': port.sendPort,
@@ -124,14 +128,36 @@ class TfAcneScanService implements AcneScanService {
 
     _image = image;
 
-    final resizeImage = imglib.copyResize(image, width: 512, height: 512);
+    final resizeImage =
+        imglib.copyResize(image, width: _outputSize, height: _outputSize);
 
-    final convertedBytes = Float32List(1 * 512 * 512 * 3);
+    final convertedBytes = Float32List(1 * _outputSize * _outputSize * 3);
     final buffer = Float32List.view(convertedBytes.buffer);
     int pixelIndex = 0;
 
-    for (int i = 0; i < 512; i++) {
-      for (int j = 0; j < 512; j++) {
+    for (int i = 0; i < _outputSize; i++) {
+      for (int j = 0; j < _outputSize; j++) {
+        final pixel = resizeImage.getPixel(j, i);
+        buffer[pixelIndex++] = (imglib.getRed(pixel) - 0) / 255;
+        buffer[pixelIndex++] = (imglib.getGreen(pixel) - 0) / 255;
+        buffer[pixelIndex++] = (imglib.getBlue(pixel) - 0) / 255;
+      }
+    }
+
+    _float32Bytes = convertedBytes.buffer.asFloat32List();
+  }
+
+  @override
+  Future<void> selectCameraImage(imglib.Image image) async {
+    final resizeImage =
+        imglib.copyResize(image, width: _outputSize, height: _outputSize);
+
+    final convertedBytes = Float32List(1 * _outputSize * _outputSize * 3);
+    final buffer = Float32List.view(convertedBytes.buffer);
+    int pixelIndex = 0;
+
+    for (int i = 0; i < _outputSize; i++) {
+      for (int j = 0; j < _outputSize; j++) {
         final pixel = resizeImage.getPixel(j, i);
         buffer[pixelIndex++] = (imglib.getRed(pixel) - 0) / 255;
         buffer[pixelIndex++] = (imglib.getGreen(pixel) - 0) / 255;
@@ -155,7 +181,6 @@ void _isolateAcneScan(Map<String, dynamic> data) {
 
   final originImage = data['originImage'];
 
-
   // final inputData = [
   //   List.generate(
   //     512,
@@ -175,9 +200,9 @@ void _isolateAcneScan(Map<String, dynamic> data) {
 
   final outputData = [
     List.generate(
-      512,
+      inputSize,
       (index) => List.generate(
-        512,
+        inputSize,
         (index) => List.generate(5, (index) => 0.0),
       ),
     ),
@@ -202,7 +227,6 @@ void _isolateAcneScan(Map<String, dynamic> data) {
   final imageBytes = imglib.encodeJpg(resultImage);
 
   sendPort.send(imageBytes);
-
 }
 
 imglib.Image _convertArrayToImage(

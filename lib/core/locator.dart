@@ -1,5 +1,4 @@
 import 'package:get_it/get_it.dart';
-import 'package:google_vision_api/google_vision_api.dart';
 import 'package:skaiscan/core/app_config.dart';
 import 'package:skaiscan/core/styles/app_style_config.dart';
 import 'package:skaiscan/services/acne_scan/acne_scan_service.dart';
@@ -38,7 +37,7 @@ void _setupDependentService() {
 
 /// All Api services are registered here.
 void _setupDependentApi() {
-  GetIt.I.registerLazySingleton<VisionApiClient>(
-    () => DioVisionApiClient(),
-  );
+  // GetIt.I.registerLazySingleton<VisionApiClient>(
+  //   () => DioVisionApiClient(),
+  // );
 }

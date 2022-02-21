@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.skaiscan.skaiscan_flutter">
+    package="com.skaiscan.app">
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
@@ -31,7 +31,9 @@
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
-
+       <meta-data
+               android:name="com.google.mlkit.vision.DEPENDENCIES"
+               android:value="face" />
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

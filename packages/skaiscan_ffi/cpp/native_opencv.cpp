@@ -148,48 +148,169 @@ extern "C" {
         return matPointer;
     }
 
+    string type2str(int type) {
+      string r;
+
+      uchar depth = type & CV_MAT_DEPTH_MASK;
+      uchar chans = 1 + (type >> CV_CN_SHIFT);
+
+      switch ( depth ) {
+        case CV_8U:  r = "8U"; break;
+        case CV_8S:  r = "8S"; break;
+        case CV_16U: r = "16U"; break;
+        case CV_16S: r = "16S"; break;
+        case CV_32S: r = "32S"; break;
+        case CV_32F: r = "32F"; break;
+        case CV_64F: r = "64F"; break;
+        default:     r = "User"; break;
+      }
+
+      r += "C";
+      r += (chans+'0');
+
+      return r;
+    }
+
     FUNCTION_ATTRIBUTE
     unsigned char *rotate_90_counter_clockwise_flip_resize_bytes(unsigned char *bytes, int32_t *imgLengthBytes, int32_t* angle,
     int32_t * width, int32_t * height){
-        cv::Mat *src = new Mat();
+
+        cv::Mat src((*width), (*height), CV_8UC3, bytes);
+
+//        cv::Mat A(100,100,CV_64F);
+//        std::memcpy(src.data, x, width*height*sizeof(double));
+//        Mat src = new Mat((*width), (*height), CV_8UC3);
+//        mat.put(0, 0, data);
+
         int32_t a = *imgLengthBytes;
-        std::vector<unsigned char> m;
 
-        while (a >= 0) {
-            m.push_back(*(bytes++));
-            a--;
-        }
-
-        *src = cv::imdecode(m, cv::IMREAD_UNCHANGED);
-        if (src->data == nullptr)
+        if (src.data == nullptr)
             return nullptr;
 
-        platform_log("create_mat_pointer_from_bytes: len before:%d  len after:%d  width:%d  height:%d",
-                     *imgLengthBytes, src->step[0] * src->rows,
-                     src->cols, src->rows);
 
-        *imgLengthBytes = src->step[0] * src->rows;
+        *imgLengthBytes = src.step[0] * src.rows;
+        string ty =  type2str( src.type() );
 
-        rotate(*src, *src, ROTATE_90_COUNTERCLOCKWISE);
+          platform_log("rotate_90_counter_clockwise_flip_resize_bytes: len before:%d  len after:%d  width:%d  height:%d, ty: %s",
+                                     *imgLengthBytes, src.step[0] * src.rows,
+                                     src.cols, src.rows,  ty.c_str());
+        cvtColor(src, src, COLOR_BGR2RGB);
+//        rotate(src, src, ROTATE_90_COUNTERCLOCKWISE);
+//
+//        flip(src, src, 1);
 
-        flip(*src, *src, 1);
-
-        if(*width != -1 && *height != -1) {
-           resize(*src, *src, Size(*width, *height), INTER_LINEAR);
-        }
-
-
+//
+//          platform_log("rotate_90_counter_clockwise_flip_resize_bytes: len before:%d  len after:%d  width:%d  height:%d",
+//                                     *imgLengthBytes, src.step[0] * src.rows,
+//                                     src.cols, src.rows);
         std::vector<uchar> buf(1);
-        cv::imencode(".bmp", *src, buf);
+        cv::imencode(".bmp", src, buf);
         *imgLengthBytes = buf.size();
 
         unsigned char *ret = (unsigned char *)malloc(buf.size());
         memcpy(ret, buf.data(), buf.size());
 
-        src->release();
-        delete src;
+//        src.release();
+
+//        delete src;
 
         return ret;
+    }
+
+    int clamp(int lower, int higher, int val){
+        if(val < lower)
+            return 0;
+        else if(val > higher)
+            return 255;
+        else
+            return val;
+    }
+
+    int getRotatedImageByteIndex(int x, int y, int rotatedImageWidth){
+        return rotatedImageWidth*(y+1)-(x+1);
+    }
+
+
+
+//    FUNCTION_ATTRIBUTE
+//    uint32_t *convert_plane_to_image(uint8_t *plane0, uint8_t *plane1, uint8_t *plane2, int bytesPerRow, int bytesPerPixel, int width, int height){
+//        int hexFF = 255;
+//        int x, y, uvIndex, index;
+//        int yp, up, vp;
+//        int r, g, b;
+//        int rt, gt, bt;
+//
+//        uint32_t *image = malloc(sizeof(uint32_t) * (width * height));
+//
+//        for(x = 0; x < width; x++){
+//            for(y = 0; y < height; y++){
+//
+//                uvIndex = bytesPerPixel * ((int) floor(x/2)) + bytesPerRow * ((int) floor(y/2));
+//                index = y*width+x;
+//
+//                yp = plane0[index];
+//                up = plane1[uvIndex];
+//                vp = plane2[uvIndex];
+//                rt = round(yp + vp * 1436 / 1024 - 179);
+//                gt = round(yp - up * 46549 / 131072 + 44 - vp * 93604 / 131072 + 91);
+//                bt = round(yp + up * 1814 / 1024 - 227);
+//                r = clamp(0, 255, rt);
+//                g = clamp(0, 255, gt);
+//                b = clamp(0, 255, bt);
+//                image[getRotatedImageByteIndex(y, x, height)] = (hexFF << 24) | (b << 16) | (g << 8) | r;
+//            }
+//        }
+//        return image;
+//    }
+//
+    FUNCTION_ATTRIBUTE
+    void *create_mat_from_yuv(uint8_t *plane0, uint8_t *plane1, uint8_t *plane2, int bytesPerRow, int bytesPerPixel, int width, int height){
+        int hexFF = 255;
+        int x, y, uvIndex, index;
+        int yp, up, vp;
+        int r, g, b;
+        int rt, gt, bt;
+
+        uint32_t *image = (uint32_t *) malloc(sizeof(uint32_t) * (width * height));
+
+        for(x = 0; x < width; x++){
+            for(y = 0; y < height; y++){
+
+                uvIndex = bytesPerPixel * ((int) floor(x/2)) + bytesPerRow * ((int) floor(y/2));
+                index = y*width+x;
+
+                yp = plane0[index];
+                up = plane1[uvIndex];
+                vp = plane2[uvIndex];
+                rt = round(yp + vp * 1436 / 1024 - 179);
+                gt = round(yp - up * 46549 / 131072 + 44 - vp * 93604 / 131072 + 91);
+                bt = round(yp + up * 1814 / 1024 - 227);
+                r = clamp(0, 255, rt);
+                g = clamp(0, 255, gt);
+                b = clamp(0, 255, bt);
+//                image[getRotatedImageByteIndex(y, x, height)] = (hexFF << 24) | (b << 16) | (g << 8) | r;
+                image[getRotatedImageByteIndex(y, x, height)] = (hexFF << 24) | (r << 16) | (g << 8) | b;
+            }
+        }
+
+       cv::Mat src((width), (height), CV_8UC4, image);
+
+
+       std::vector<uchar> buf(1);
+       cv::imencode(".bmp", src, buf);
+
+       unsigned char *ret = (unsigned char *)malloc(buf.size());
+
+       memcpy(ret, buf.data(), buf.size());
+
+       platform_log("create_mat_from_yuv: len:%d  width:%d  height:%d"
+                                     ,src.step[0] * src.rows,
+                                     src.cols, src.rows);
+       src.release();
+
+       delete[] image;
+
+       return ret;
     }
 
     FUNCTION_ATTRIBUTE
@@ -267,6 +388,7 @@ extern "C" {
 
    FUNCTION_ATTRIBUTE
    void* apply_acne_mask_color(void *src_ptr, void *origin_ptr) {
+
 //        Mat *mask = (Mat *) src_ptr;
 //
 //        Mat *origin = (Mat *) origin_ptr;
@@ -293,6 +415,7 @@ extern "C" {
 //        origin_bgra.release();
 //
 //        return result;
+
    }
 
 
