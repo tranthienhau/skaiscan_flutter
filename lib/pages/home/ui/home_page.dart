@@ -53,30 +53,30 @@ class _HomePageState extends State<HomePage> {
             return;
           }
 
-          //
-          // showDialog<String>(
-          //   context: context,
-          //   builder: (BuildContext context) => AlertDialog(
-          //     contentPadding: EdgeInsets.zero,
-          //     insetPadding: EdgeInsets.zero,
-          //     actionsPadding: EdgeInsets.zero,
-          //     buttonPadding: EdgeInsets.zero,
-          //     titlePadding: EdgeInsets.zero,
-          //     title: const Text('AlertDialog Title'),
-          //     content: Image.memory(result),
-          //     actions: <Widget>[
-          //       TextButton(
-          //         onPressed: () => Navigator.pop(context, 'Cancel'),
-          //         child: const Text('Cancel'),
-          //       ),
-          //       TextButton(
-          //         onPressed: () => Navigator.pop(context, 'OK'),
-          //         child: const Text('OK'),
-          //       ),
-          //     ],
-          //   ),
-          // );
-          //
+
+          showDialog<String>(
+            context: context,
+            builder: (BuildContext context) => AlertDialog(
+              contentPadding: EdgeInsets.zero,
+              insetPadding: EdgeInsets.zero,
+              actionsPadding: EdgeInsets.zero,
+              buttonPadding: EdgeInsets.zero,
+              titlePadding: EdgeInsets.zero,
+              title: const Text('AlertDialog Title'),
+              content: Image.memory(result),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () => Navigator.pop(context, 'Cancel'),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, 'OK'),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+
         }
       },
       builder: (context, state) {

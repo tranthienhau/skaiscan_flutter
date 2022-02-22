@@ -61,6 +61,7 @@ dependencies:
   google_ml_kit: ^0.7.3
   percent_indicator: ^4.0.0
   dotted_border: ^2.0.0+2
+  isolate_handler: ^1.0.0
   skaiscan_localizations:
     path: ./packages/skaiscan_localizations
   skaiscan_log_service:
@@ -100,7 +101,7 @@ flutter:
   assets:
     - assets/feature/
     - assets/icon/
-#    - assets/model/
+    - assets/model/unet_model.tflite
 
 flutter_gen:
   integrations:

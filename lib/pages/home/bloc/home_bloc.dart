@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:isolate';
 import 'dart:math' as math;
 import 'dart:math';
@@ -108,65 +109,72 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     }
 
     try {
-      // final bytes = event.cameraImage.planes[0].bytes;
-      // final bytes = concatenatePlanes(event.cameraImage.planes);
-      //
-      // final resultBytes =
-      //     await _nativeOpencv.rotate90CounterClockwiseFlipResize(
-      //   // bytes: Uint8List.fromList(bytes),
-      //   bytes: bytes,
-      //   flip: 1,
-      //   resizeWidth: event.cameraImage.height,
-      //   resizeHeight: event.cameraImage.width,
-      // );
+      // int rotation = Platform.isAndroid ? _cameraService.rotation : 0;
 
-//       final receivePort = ReceivePort();
-// //
-//
-//       await Isolate.spawn(
-//         _base64decodeIsolate,
-//         DecodeBase64Param(
-//           bytes: resultBytes,
-//           sendPort: receivePort.sendPort,
-//         ),
-//       );
-//       String decodeBase64 = await receivePort.first as String;
-
-      // imglib.Image? image = convertToImage(event.cameraImage);
-      // if (image == null) {
-      //   return;
-      // }
-      // final rotateImage = imglib.copyRotate(image, -90);
-      // final flipOutputImage = imglib.flipHorizontal(rotateImage);
-
-      // var image = decodeImage(resultBytes)!;
-
-      final resultBytes = await _nativeOpencv.getBytesYUV420(
+      final bytes = await _nativeOpencv.createImageFromCameraImageToBytes(
         yBytes: event.cameraImage.planes[0].bytes,
-        uBytes: event.cameraImage.planes[1].bytes,
-        vBytes: event.cameraImage.planes[2].bytes,
-        bytesPerRow: event.cameraImage.planes[1].bytesPerRow,
-        bytesPerPixel: event.cameraImage.planes[1].bytesPerPixel ?? 1,
-        width: event.cameraImage.planes[0].bytesPerRow,
+        uBytes: Platform.isAndroid ? event.cameraImage.planes[1].bytes : null,
+        vBytes: Platform.isAndroid ? event.cameraImage.planes[2].bytes : null,
+        isYUV: Platform.isAndroid,
+        bytesPerRow:
+            Platform.isAndroid ? event.cameraImage.planes[1].bytesPerRow : 0,
+        bytesPerPixel: Platform.isAndroid
+            ? event.cameraImage.planes[1].bytesPerPixel ?? 0
+            : 0,
+        width: event.cameraImage.width,
         height: event.cameraImage.height,
       );
 
+      // final nativeImage = await _nativeOpencv.createImageFromCameraImageV2(
+      //   yBytes: event.cameraImage.planes[0].bytes,
+      //   uBytes: Platform.isAndroid ? event.cameraImage.planes[1].bytes : null,
+      //   vBytes: Platform.isAndroid ? event.cameraImage.planes[2].bytes : null,
+      //   isYUV: Platform.isAndroid,
+      //   bytesPerRow:
+      //       Platform.isAndroid ? event.cameraImage.planes[1].bytesPerRow : 0,
+      //   bytesPerPixel: Platform.isAndroid
+      //       ? event.cameraImage.planes[1].bytesPerPixel ?? 0
+      //       : 0,
+      //   width: event.cameraImage.width,
+      //   height: event.cameraImage.height,
+      // );
+
+      // final nativeImage = await _nativeOpencv.createImageFromYUV420(
+      //   yBytes: event.cameraImage.planes[0].bytes,
+      //   //   uBytes: Platform.isAndroid ? event.cameraImage.planes[1].bytes : null,
+      //   //   vBytes: Platform.isAndroid ? event.cameraImage.planes[2].bytes : null,
+      //   bytesPerRow: event.cameraImage.planes[1].bytesPerRow,
+      //   bytesPerPixel: event.cameraImage.planes[1].bytesPerPixel ?? 1,
+      //   width: event.cameraImage.planes[0].bytesPerRow,
+      //   height: event.cameraImage.height,
+      // );
+
+      // final bytes = await _nativeOpencv.convertNativeImageToBytes(nativeImage);
+
+      emit(
+        HomeScanComplete(
+          state.data.copyWith(
+            captureBytes: bytes,
+          ),
+        ),
+      );
+      // _nativeOpencv.release(nativeImage);
+
+      _cameraCheckCompleter?.complete();
+
+      return;
+
       final faces =
           await _faceDetectorService.getFacesFromImage(event.cameraImage);
+
       if (faces.isNotEmpty) {
         final face = faces.first;
 
         final isContain = _uiRectangle?.containsRectangle(
-              Rectangle(
-                face.boundingBox.left,
-                face.boundingBox.top,
-                face.boundingBox.width,
-                face.boundingBox.height,
-              ),
+              Rectangle(face.left, face.top, face.width, face.height),
             ) ??
             false;
 
-        print('isContain : $isContain');
         if (isContain) {
           emit(
             HomeLoadSuccess(
@@ -183,6 +191,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
           );
         }
       }
+
       // await _mlService.detectFace(flipOutputImage);
 
       //   event.cameraImage.height,

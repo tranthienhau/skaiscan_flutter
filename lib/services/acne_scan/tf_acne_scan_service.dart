@@ -36,11 +36,12 @@ class TfAcneScanService implements AcneScanService {
     //   // TfLiteGpuInferencePriority.auto,
     // ));
 
-    // var interpreterOptions = InterpreterOptions()..addDelegate(gpuDelegateV2);
-    // _interpreter = await Interpreter.fromAsset('model/model2.tflite',
-    //     options: options);
+    // final interpreterOptions = InterpreterOptions()..addDelegate(gpuDelegateV2);
+    _interpreter = await Interpreter.fromAsset('model/unet_model.tflite',
+        options: options);
 
-    // Tensor tensor = interpreter.getOutputTensor(0);
+    Tensor tensor = _interpreter.getOutputTensor(0);
+    print('Load model success');
     // final outputTensor =
     // Tensor(tfLiteInterpreterGetOutputTensor(_interpreter, index));
   }
@@ -64,7 +65,7 @@ class TfAcneScanService implements AcneScanService {
     // ];
 
     List inputReshape =
-        float32Bytes.reshape(<int>[1, _outputSize, _outputSize, 3]);
+    float32Bytes.reshape(<int>[1, _outputSize, _outputSize, 3]);
 
     // final recognitions = await Tflite.runModelOnBinary(
     //     binary: float32Bytes.buffer.asUint8List(),// required
@@ -129,7 +130,7 @@ class TfAcneScanService implements AcneScanService {
     _image = image;
 
     final resizeImage =
-        imglib.copyResize(image, width: _outputSize, height: _outputSize);
+    imglib.copyResize(image, width: _outputSize, height: _outputSize);
 
     final convertedBytes = Float32List(1 * _outputSize * _outputSize * 3);
     final buffer = Float32List.view(convertedBytes.buffer);
@@ -150,7 +151,7 @@ class TfAcneScanService implements AcneScanService {
   @override
   Future<void> selectCameraImage(imglib.Image image) async {
     final resizeImage =
-        imglib.copyResize(image, width: _outputSize, height: _outputSize);
+    imglib.copyResize(image, width: _outputSize, height: _outputSize);
 
     final convertedBytes = Float32List(1 * _outputSize * _outputSize * 3);
     final buffer = Float32List.view(convertedBytes.buffer);
@@ -194,17 +195,18 @@ void _isolateAcneScan(Map<String, dynamic> data) {
   final inputs = <Object>[input];
 
   Interpreter interpreterTransform =
-      Interpreter.fromAddress(interpreterTransformAddress);
+  Interpreter.fromAddress(interpreterTransformAddress);
 
   final outputs = <int, Object>{};
 
-  final outputData = [
+  final List<List<List<List<double>>>> outputData = [
     List.generate(
       inputSize,
-      (index) => List.generate(
-        inputSize,
-        (index) => List.generate(5, (index) => 0.0),
-      ),
+          (index) =>
+          List.generate(
+            inputSize,
+                (index) => List.generate(5, (index) => 0.0),
+          ),
     ),
   ];
 
@@ -212,25 +214,27 @@ void _isolateAcneScan(Map<String, dynamic> data) {
 
   interpreterTransform.runForMultipleInputs(inputs, outputs);
 
-  final outputImage = _convertArrayToImage(outputData, inputSize);
+  // for ()
 
-  final rotateOutputImage = imglib.copyRotate(outputImage, 90);
-
-  final flipOutputImage = imglib.flipHorizontal(rotateOutputImage);
-
-  final resultImage = imglib.copyResize(
-    flipOutputImage,
-    width: originImage.width,
-    height: originImage.height,
-  );
-
-  final imageBytes = imglib.encodeJpg(resultImage);
-
-  sendPort.send(imageBytes);
+  // final outputImage = _convertArrayToImage(outputData, inputSize);
+  //
+  // final rotateOutputImage = imglib.copyRotate(outputImage, 90);
+  //
+  // final flipOutputImage = imglib.flipHorizontal(rotateOutputImage);
+  //
+  // final resultImage = imglib.copyResize(
+  //   flipOutputImage,
+  //   width: originImage.width,
+  //   height: originImage.height,
+  // );
+  //
+  // final imageBytes = imglib.encodeJpg(resultImage);
+  //
+  // sendPort.send(imageBytes);
 }
 
-imglib.Image _convertArrayToImage(
-    List<List<List<List<double>>>> imageArray, int inputSize) {
+imglib.Image _convertArrayToImage(List<List<List<List<double>>>> imageArray,
+    int inputSize) {
   imglib.Image image = imglib.Image.rgb(inputSize, inputSize);
   for (int x = 0; x < imageArray[0].length; x++) {
     for (int y = 0; y < imageArray[0][0].length; y++) {

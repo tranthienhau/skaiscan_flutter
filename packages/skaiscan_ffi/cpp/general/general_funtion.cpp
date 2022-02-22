@@ -1,6 +1,8 @@
 #ifdef __ANDROID__
 #include <android/log.h>
 #endif
+#include <stdarg.h>
+using namespace std;
 //Log to view in console
 void platform_log(const char *fmt, ...) {
     va_list args;
@@ -8,7 +10,7 @@ void platform_log(const char *fmt, ...) {
 #ifdef __ANDROID__
     __android_log_vprint(ANDROID_LOG_VERBOSE, "native_curl:", fmt, args);
 #else
-    vprintf(fmt, args);
+//    vprintf(fmt, args);
 #endif
     va_end(args);
 }

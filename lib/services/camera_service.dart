@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:camera/camera.dart';
@@ -21,17 +22,24 @@ class CameraService {
   final StreamController<CameraImage> _cameraStreamController =
       StreamController<CameraImage>.broadcast();
 
+  int _rotation = 0;
+  int get rotation => _rotation;
+
   Future<void> startService(CameraDescription cameraDescription) async {
     _cameraDescription = cameraDescription;
     _cameraController = CameraController(
       _cameraDescription,
       ResolutionPreset.high,
       enableAudio: false,
-      imageFormatGroup: ImageFormatGroup.bgra8888,
+      imageFormatGroup: Platform.isAndroid
+          ? ImageFormatGroup.yuv420
+          : ImageFormatGroup.bgra8888,
     );
 
     _cameraRotation =
         rotationIntToImageRotation(cameraDescription.sensorOrientation);
+
+    _rotation = cameraDescription.sensorOrientation;
 
     await _cameraController.initialize();
     await _cameraController

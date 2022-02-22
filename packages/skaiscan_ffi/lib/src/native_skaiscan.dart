@@ -32,6 +32,8 @@ class NativeSkaiscan {
     return pointerPointer;
   }
 
+
+
   // Future<NativeImage> applyMask(NativeImage mask, NativeImage origin, List<MaskColorData> maskColors) async {
   //
   //
