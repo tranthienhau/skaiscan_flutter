@@ -8,6 +8,7 @@ set(SRC_FILES
         ../cpp/general/general_funtion.h
         ../cpp/general/general_funtion.cpp
         ../cpp/native_opencv.cpp
+        ../cpp/native_skaiscan.cpp
         )
 add_library(native-lib SHARED ${SRC_FILES})
 #set(OpenCV_DIR ${CMAKE_CURRENT_SOURCE_DIR}/opencv-mobile-4.5.4-android/sdk/native/jni)

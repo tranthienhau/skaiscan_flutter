@@ -53,30 +53,36 @@ class _HomePageState extends State<HomePage> {
             return;
           }
 
-
-          showDialog<String>(
-            context: context,
-            builder: (BuildContext context) => AlertDialog(
-              contentPadding: EdgeInsets.zero,
-              insetPadding: EdgeInsets.zero,
-              actionsPadding: EdgeInsets.zero,
-              buttonPadding: EdgeInsets.zero,
-              titlePadding: EdgeInsets.zero,
-              title: const Text('AlertDialog Title'),
-              content: Image.memory(result),
-              actions: <Widget>[
-                TextButton(
-                  onPressed: () => Navigator.pop(context, 'Cancel'),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, 'OK'),
-                  child: const Text('OK'),
-                ),
-              ],
+          App.pushNamed(
+            AppRoutes.scannedAcneResult,
+            AcneScanArgs(
+              acneList: [],
+              scanBytes: result,
             ),
           );
 
+          // showDialog<String>(
+          //   context: context,
+          //   builder: (BuildContext context) => AlertDialog(
+          //     contentPadding: EdgeInsets.zero,
+          //     insetPadding: EdgeInsets.zero,
+          //     actionsPadding: EdgeInsets.zero,
+          //     buttonPadding: EdgeInsets.zero,
+          //     titlePadding: EdgeInsets.zero,
+          //     title: const Text('AlertDialog Title'),
+          //     content: Image.memory(result),
+          //     actions: <Widget>[
+          //       TextButton(
+          //         onPressed: () => Navigator.pop(context, 'Cancel'),
+          //         child: const Text('Cancel'),
+          //       ),
+          //       TextButton(
+          //         onPressed: () => Navigator.pop(context, 'OK'),
+          //         child: const Text('OK'),
+          //       ),
+          //     ],
+          //   ),
+          // );
         }
       },
       builder: (context, state) {
@@ -144,7 +150,9 @@ class _CameraViewState extends State<CameraView> {
   Widget _buildCameraView() {
     final controller = _controller;
     if (controller == null) {
-      return const SizedBox();
+      return const Center(
+        child: LoadingIndicator(),
+      );
     }
 
     return BlocBuilder<HomeBloc, HomeState>(
@@ -249,6 +257,8 @@ class _CameraViewState extends State<CameraView> {
         ],
       ),
       onPressed: () async {
+        _showProgressDialog(context, BlocProvider.of<HomeBloc>(context));
+        BlocProvider.of<HomeBloc>(context).add(HomeAcneScanned());
         // try {
         //   await _cameraService.stopImageStream();
         // } catch (_) {}
@@ -263,6 +273,7 @@ class _CameraViewState extends State<CameraView> {
   }
 
   void _showProgressDialog(BuildContext context, HomeBloc homeBloc) {
+    // bool animateFromLastPercent = false;
     showDialog<String>(
       context: context,
       barrierColor: Colors.black.withOpacity(0.8),
@@ -291,6 +302,7 @@ class _CameraViewState extends State<CameraView> {
               width: MediaQuery.of(context).size.width - 32,
               lineHeight: 16.0,
               animation: true,
+              animateFromLastPercent: state.data.scanPercent != 0,
               animationDuration: 1000,
               percent: state.data.scanPercent / 100,
               progressColor: Theme.of(context).primaryColor,

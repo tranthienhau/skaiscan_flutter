@@ -130,8 +130,14 @@ final Pointer<Uint8> Function(Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>,
 
 final Pointer Function(Pointer<Uint8> bytes, int width, int height)
     converRBGABytesToMat = nativeLib
+        .lookup<NativeFunction<Pointer Function(Pointer<Uint8>, Int32, Int32)>>(
+            'create_mat_from_bgra_bytes')
+        .asFunction();
+
+final Pointer<Uint8> Function(Pointer<Uint8>, Pointer<Int32>, int, int, int, int)
+    cropImageBytes = nativeLib
         .lookup<
             NativeFunction<
-                Pointer Function(Pointer<Uint8>, Int32,
-                    Int32)>>('create_mat_from_bgra_bytes')
+                Pointer<Uint8> Function(Pointer<Uint8>, Pointer<Int32>, Int32,
+                    Int32, Int32, Int32)>>('crop_image_bytes')
         .asFunction();

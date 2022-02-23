@@ -352,8 +352,64 @@ class NativeOpencv {
 
     return bytes;
   }
+
+  Future<Uint8List> cropImageBytes({
+    required Uint8List bytes,
+    required CvRectangle rect,
+  }) async {
+    final port = ReceivePort();
+
+    /// Spawning an isolate
+    Isolate.spawn<Map<String, dynamic>>(
+      _isolateCropImageBytes,
+      {
+        'bytes': bytes,
+        'left': rect.left,
+        'top': rect.top,
+        'width': rect.width,
+        'height': rect.height,
+        'sendPort': port.sendPort,
+      },
+      onError: port.sendPort,
+      // onExit: port.sendPort,
+    );
+
+    final Uint8List resultBytes = await port.first as Uint8List;
+
+    return resultBytes;
+  }
+
 // Future<void> cropImage(NativeImage image, CvRectangle rect) async {}
 
+}
+
+void _isolateCropImageBytes(Map<String, dynamic> data) {
+  final Uint8List bytes = data['bytes'];
+  final int left = data['left'];
+  final int top = data['top'];
+  final int width = data['width'];
+  final int height = data['height'];
+  final SendPort sendPort = data['sendPort'];
+
+  Pointer<Uint8> pointerBytes = _intListToArray(bytes);
+
+  Pointer<Int32> lengthPtr = malloc.allocate<Int32>(sizeOf<Int32>());
+
+  lengthPtr.value = bytes.length;
+
+  final imageBytesPointer =
+      cropImageBytes(pointerBytes, lengthPtr, left, top, width, height);
+
+  Uint8List imageBytes = imageBytesPointer.asTypedList(lengthPtr.value);
+
+  final copyBytes = Uint8List.fromList(imageBytes);
+
+  malloc.free(pointerBytes);
+  malloc.free(lengthPtr);
+  malloc.free(imageBytesPointer);
+
+
+  sendPort.send(copyBytes);
 }
 
 void _isolateConvertCameraImageToBytes(Map<String, dynamic> data) {
@@ -622,7 +678,7 @@ void _isolateDrawRectMatPointer(Map<String, dynamic> data) {
 
   final matPointer = Pointer.fromAddress(pointerAddress);
 
-  nativeDrawRect(matPointer, rect.x, rect.y, rect.width, rect.height);
+  nativeDrawRect(matPointer, rect.left, rect.top, rect.width, rect.height);
 
   sendPort.send({'matAddress': matPointer.address});
 }

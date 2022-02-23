@@ -29,7 +29,9 @@ class _ScannedAcneResultPageState extends State<ScannedAcneResultPage> {
           child: CircleButton(
             backgroundColor: Colors.transparent,
             child: Assets.icon.cancel.svg(),
-            onPressed: () {},
+            onPressed: () {
+              App.pop();
+            },
           ),
         ),
         ClipRRect(

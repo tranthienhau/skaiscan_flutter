@@ -21,6 +21,11 @@ public final class GeneratedPluginRegistrant {
       Log.e(TAG, "Error registering plugin camera, io.flutter.plugins.camera.CameraPlugin", e);
     }
     try {
+      flutterEngine.getPlugins().add(new io.flutter.plugins.firebase.core.FlutterFirebaseCorePlugin());
+    } catch(Exception e) {
+      Log.e(TAG, "Error registering plugin firebase_core, io.flutter.plugins.firebase.core.FlutterFirebaseCorePlugin", e);
+    }
+    try {
       flutterEngine.getPlugins().add(new com.rmawatson.flutterisolate.FlutterIsolatePlugin());
     } catch(Exception e) {
       Log.e(TAG, "Error registering plugin flutter_isolate, com.rmawatson.flutterisolate.FlutterIsolatePlugin", e);

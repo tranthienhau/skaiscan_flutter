@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
@@ -46,7 +47,7 @@ class FaceDetectorService {
   }
 
   late CameraService _cameraService;
-  final isolates = IsolateHandler();
+  late IsolateHandler _isolateManager;
   late FaceDetector _faceDetector;
 
   late Completer<List<FaceRectangle>> _isolateCompleter;
@@ -54,17 +55,20 @@ class FaceDetectorService {
   FaceDetector get faceDetector => _faceDetector;
 
   void initialize() {
-    isolates.spawn<dynamic>(
-      _isolateFaceDetection,
-      name: 'isolateFaceDetection',
-      onReceive: communicationFromIsolate,
-      // onInitialized: () => isolates.send("test", to: "isolate"),
-    );
-    // _faceDetector = GoogleMlKit.vision.faceDetector(
-    //   const FaceDetectorOptions(
-    //     mode: FaceDetectorMode.accurate,
-    //   ),
-    // );
+    if (Platform.isAndroid) {
+      _isolateManager = IsolateHandler();
+      _isolateManager.spawn<dynamic>(
+        _isolateFaceDetection,
+        name: 'isolateFaceDetection',
+        onReceive: communicationFromIsolate,
+        // onInitialized: () => isolates.send("test", to: "isolate"),
+      );
+    } else {
+      _faceDetector = GoogleMlKit.vision.faceDetector(
+        const FaceDetectorOptions(
+            mode: FaceDetectorMode.accurate, minFaceSize: 0.5),
+      );
+    }
   }
 
   void communicationFromIsolate(dynamic data) {
@@ -79,45 +83,57 @@ class FaceDetectorService {
   }
 
   Future<List<FaceRectangle>> getFacesFromImage(CameraImage image) async {
-    _isolateCompleter = Completer<List<FaceRectangle>>();
+    if (Platform.isAndroid) {
+      _isolateCompleter = Completer<List<FaceRectangle>>();
 
-    isolates.send(
-      {
-        'imageRotation': _cameraService.cameraRotation.rawValue,
-        'bytes': image.planes[0].bytes,
-        'format': image.format.raw,
-        'width': image.width,
-        'height': image.height,
-        'message': 'detect',
-      },
-      to: 'isolateFaceDetection',
-    );
+      _isolateManager.send(
+        {
+          'imageRotation': _cameraService.cameraRotation.rawValue,
+          'bytes': image.planes[0].bytes,
+          'format': image.format.raw,
+          'width': image.width,
+          'height': image.height,
+          'message': 'detect',
+        },
+        to: 'isolateFaceDetection',
+      );
+      final result = await _isolateCompleter.future;
+      return result;
+    } else {
+      InputImageData _firebaseImageMetadata = InputImageData(
+        imageRotation: _cameraService.cameraRotation,
+        inputImageFormat:
+            InputImageFormatMethods.fromRawValue(image.format.raw)!,
+        size: Size(image.width.toDouble(), image.height.toDouble()),
+        planeData: image.planes.map(
+          (Plane plane) {
+            return InputImagePlaneMetadata(
+              bytesPerRow: plane.bytesPerRow,
+              height: plane.height,
+              width: plane.width,
+            );
+          },
+        ).toList(),
+      );
 
-    //
-    // InputImageData _firebaseImageMetadata = InputImageData(
-    //   imageRotation: _cameraService.cameraRotation,
-    //   inputImageFormat: InputImageFormatMethods.fromRawValue(image.format.raw)!,
-    //   size: Size(image.width.toDouble(), image.height.toDouble()),
-    //   planeData: image.planes.map(
-    //     (Plane plane) {
-    //       return InputImagePlaneMetadata(
-    //         bytesPerRow: plane.bytesPerRow,
-    //         height: plane.height,
-    //         width: plane.width,
-    //       );
-    //     },
-    //   ).toList(),
-    // );
-    //
-    // InputImage _firebaseVisionImage = InputImage.fromBytes(
-    //   bytes: image.planes[0].bytes,
-    //   inputImageData: _firebaseImageMetadata,
-    // );
-    //
-    // List<Face> faces = await _faceDetector.processImage(_firebaseVisionImage);
+      InputImage _firebaseVisionImage = InputImage.fromBytes(
+        bytes: image.planes[0].bytes,
+        inputImageData: _firebaseImageMetadata,
+      );
 
-    final result = await _isolateCompleter.future;
-    return result;
+      List<Face> faces = await _faceDetector.processImage(_firebaseVisionImage);
+      final rectList = faces
+          .map((face) => FaceRectangle(
+                height: face.boundingBox.height.toInt(),
+                width: face.boundingBox.width.toInt(),
+                top: face.boundingBox.top.toInt(),
+                left: face.boundingBox.left.toInt(),
+              ))
+          .toList();
+
+      print('Face: ${rectList.length}');
+      return rectList;
+    }
   }
 
   dispose() {
@@ -182,7 +198,6 @@ void _isolateFaceDetection(Map<String, dynamic> context) {
             await faceDetector.processImage(_firebaseVisionImage);
 
         // print('face: ${faces.length}');
-
 
         final faceRectList = faces
             .map((face) => FaceRectangle(

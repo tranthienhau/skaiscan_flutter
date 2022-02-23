@@ -1,14 +1,14 @@
 import 'dart:ffi';
 
 class CvRectangle {
-  final int x;
-  final int y;
+  final int left;
+  final int top;
   final int width;
   final int height;
 
   const CvRectangle({
-    required this.x,
-    required this.y,
+    required this.left,
+    required this.top,
     required this.width,
     required this.height,
   });
@@ -20,8 +20,8 @@ class CvRectangle {
     int? height,
   }) {
     return CvRectangle(
-      x: x ?? this.x,
-      y: y ?? this.y,
+      left: x ?? this.left,
+      top: y ?? this.top,
       width: width ?? this.width,
       height: height ?? this.height,
     );

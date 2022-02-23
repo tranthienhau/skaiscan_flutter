@@ -11,12 +11,6 @@ class HomeCameraFaceChecked extends HomeEvent {
   HomeCameraFaceChecked(this.cameraImage);
 }
 
-
-
-class HomeAcneScanned extends HomeEvent {
-  final XFile file;
-
-  HomeAcneScanned(this.file);
-}
+class HomeAcneScanned extends HomeEvent {}
 
 class HomeLoaded extends HomeEvent {}

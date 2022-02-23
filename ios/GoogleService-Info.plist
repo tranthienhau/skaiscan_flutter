@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>910207902521-iljum2jcscstssdhchiqstfo6qa85b4p.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.910207902521-iljum2jcscstssdhchiqstfo6qa85b4p</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>910207902521-lqo4bakp2vn3irh5as9ihes69vk2kc96.apps.googleusercontent.com</string>
+	<key>API_KEY</key>
+	<string>AIzaSyB0WwiTd1XIc44vIxxGV_waicbGAD0C-1M</string>
+	<key>GCM_SENDER_ID</key>
+	<string>910207902521</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.skaiscan.app</string>
+	<key>PROJECT_ID</key>
+	<string>skaiscan</string>
+	<key>STORAGE_BUCKET</key>
+	<string>skaiscan.appspot.com</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:910207902521:ios:a233a7e25f21fb320dfee8</string>
+</dict>
+</plist>

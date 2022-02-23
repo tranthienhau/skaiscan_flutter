@@ -58,9 +58,12 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<HomeCameraFaceChecked>(_onCameraFaceChecked);
     _cameraStreamSubscription = _cameraService.cameraImageStream
         .listen((CameraImage cameraImage) async {
-      _cameraImage = cameraImage;
-      if (_cameraCheckCompleter?.isCompleted ?? true) {
-        add(HomeCameraFaceChecked(cameraImage));
+      if (_scanCompleter?.isCompleted ?? true) {
+        _cameraImage = cameraImage;
+
+        if (_cameraCheckCompleter?.isCompleted ?? true) {
+          add(HomeCameraFaceChecked(cameraImage));
+        }
       }
     });
   }
@@ -68,6 +71,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   // final _lock = Lock();
 
   final _nativeOpencv = NativeOpencv();
+  final _nativeSkaiscan = NativeSkaiscan();
   late CameraService _cameraService;
   late CameraImage _cameraImage;
   late StreamSubscription _cameraStreamSubscription;
@@ -79,7 +83,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   // late FaceDetectorService _faceDetectorService;
   // late VisionApiClient _visionApiClient;
   late AcneScanService _acneScanService;
-  Completer<void>? _completer;
+  Completer<void>? _scanCompleter;
   Completer<void>? _cameraCheckCompleter;
   Rectangle<int>? _uiRectangle;
 
@@ -103,67 +107,14 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
     if (_uiRectangle == null) {
       _calculateCropRectInImage(
-        event.cameraImage.height,
-        event.cameraImage.width,
+        Platform.isAndroid ? event.cameraImage.height : event.cameraImage.width,
+        Platform.isAndroid ? event.cameraImage.width : event.cameraImage.height,
       );
     }
 
+    // add(HomeAcneScanned());
+
     try {
-      // int rotation = Platform.isAndroid ? _cameraService.rotation : 0;
-
-      final bytes = await _nativeOpencv.createImageFromCameraImageToBytes(
-        yBytes: event.cameraImage.planes[0].bytes,
-        uBytes: Platform.isAndroid ? event.cameraImage.planes[1].bytes : null,
-        vBytes: Platform.isAndroid ? event.cameraImage.planes[2].bytes : null,
-        isYUV: Platform.isAndroid,
-        bytesPerRow:
-            Platform.isAndroid ? event.cameraImage.planes[1].bytesPerRow : 0,
-        bytesPerPixel: Platform.isAndroid
-            ? event.cameraImage.planes[1].bytesPerPixel ?? 0
-            : 0,
-        width: event.cameraImage.width,
-        height: event.cameraImage.height,
-      );
-
-      // final nativeImage = await _nativeOpencv.createImageFromCameraImageV2(
-      //   yBytes: event.cameraImage.planes[0].bytes,
-      //   uBytes: Platform.isAndroid ? event.cameraImage.planes[1].bytes : null,
-      //   vBytes: Platform.isAndroid ? event.cameraImage.planes[2].bytes : null,
-      //   isYUV: Platform.isAndroid,
-      //   bytesPerRow:
-      //       Platform.isAndroid ? event.cameraImage.planes[1].bytesPerRow : 0,
-      //   bytesPerPixel: Platform.isAndroid
-      //       ? event.cameraImage.planes[1].bytesPerPixel ?? 0
-      //       : 0,
-      //   width: event.cameraImage.width,
-      //   height: event.cameraImage.height,
-      // );
-
-      // final nativeImage = await _nativeOpencv.createImageFromYUV420(
-      //   yBytes: event.cameraImage.planes[0].bytes,
-      //   //   uBytes: Platform.isAndroid ? event.cameraImage.planes[1].bytes : null,
-      //   //   vBytes: Platform.isAndroid ? event.cameraImage.planes[2].bytes : null,
-      //   bytesPerRow: event.cameraImage.planes[1].bytesPerRow,
-      //   bytesPerPixel: event.cameraImage.planes[1].bytesPerPixel ?? 1,
-      //   width: event.cameraImage.planes[0].bytesPerRow,
-      //   height: event.cameraImage.height,
-      // );
-
-      // final bytes = await _nativeOpencv.convertNativeImageToBytes(nativeImage);
-
-      emit(
-        HomeScanComplete(
-          state.data.copyWith(
-            captureBytes: bytes,
-          ),
-        ),
-      );
-      // _nativeOpencv.release(nativeImage);
-
-      _cameraCheckCompleter?.complete();
-
-      return;
-
       final faces =
           await _faceDetectorService.getFacesFromImage(event.cameraImage);
 
@@ -178,72 +129,17 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         if (isContain) {
           emit(
             HomeLoadSuccess(
-              state.data.copyWith(allowScan: true),
+              state.data.copyWith(allowScan: true, scanPercent: 0),
             ),
           );
         } else {
           emit(
-            HomeLoadSuccess(
-              state.data.copyWith(
-                allowScan: false,
-              ),
-            ),
+            HomeLoadSuccess(state.data.copyWith(allowScan: false)),
           );
         }
       }
 
       // await _mlService.detectFace(flipOutputImage);
-
-      //   event.cameraImage.height,
-      // event.cameraImage.width,
-      // _nativeOpencv.createImageFromBytes(event.cameraImage.planes[0].bytes);
-      // stopwatch.stop();
-      // print('native elapsed: ${stopwatch.elapsed.inMilliseconds}');
-      // print(stopwatch.isRunning); // false
-      // Duration elapsed = stopwatch.elapsed;
-
-      // final receivePort = ReceivePort();
-
-      // stopwatch = Stopwatch();
-      // print(stopwatch.elapsedMilliseconds); // 0
-      // print(stopwatch.isRunning); // false
-      // stopwatch.start();
-      // print(stopwatch.isRunning); //
-
-      // await Isolate.spawn(
-      //   _decodeIsolate,
-      //   DecodeParam(
-      //     image: event.cameraImage,
-      //     sendPort: receivePort.sendPort,
-      //   ),
-      // );
-      //
-      // DecodeResult? decodeResult = await receivePort.first as DecodeResult?;
-      //
-      // if (decodeResult == null) {
-      //   throw Exception('Can not convert camera image to dart image');
-      // }
-      // stopwatch.stop();
-      // print('elapsed: ${stopwatch.elapsed.inMilliseconds}');
-      // print(stopwatch.isRunning); // false
-      // elapsed = stopwatch.elapsed;
-      //
-      // emit(
-      //   HomeScanComplete(
-      //     state.data.copyWith(
-      //       captureBytes: decodeResult.bytes,
-      //     ),
-      //   ),
-      // );
-
-      // emit(
-      //   HomeScanComplete(
-      //     state.data.copyWith(
-      //       scanPercent: 0,
-      //       captureBytes: resultBytes,
-      //     ),
-      //   ),
-      // );
 
       _cameraCheckCompleter?.complete();
       return;
@@ -259,10 +155,6 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       );
     }
 
-    // try {
-    //   await _cameraService.startImageStream();
-    // } catch (_) {}
-
     _cameraCheckCompleter?.complete();
   }
 
@@ -270,11 +162,76 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     HomeAcneScanned event,
     Emitter<HomeState> emit,
   ) async {
-    final bytes = await event.file.readAsBytes();
+    if (!(_scanCompleter?.isCompleted ?? true)) {
+      return;
+    }
 
-    // final image = imglib.decodeImage(bytes)!;
+    _scanCompleter = Completer<void>();
+
+    final cameraImage = _cameraImage;
+
+    final data = state.data;
+
+    emit(HomeScanInProgress(data.copyWith(scanPercent: 10)));
+
+    final bytes = await _nativeOpencv.createImageFromCameraImageToBytes(
+      yBytes: cameraImage.planes[0].bytes,
+      uBytes: Platform.isAndroid ? cameraImage.planes[1].bytes : null,
+      vBytes: Platform.isAndroid ? cameraImage.planes[2].bytes : null,
+      isYUV: Platform.isAndroid,
+      bytesPerRow: Platform.isAndroid ? cameraImage.planes[1].bytesPerRow : 0,
+      bytesPerPixel:
+          Platform.isAndroid ? cameraImage.planes[1].bytesPerPixel ?? 0 : 0,
+      width: cameraImage.width,
+      height: cameraImage.height,
+    );
+
+    emit(HomeScanInProgress(data.copyWith(scanPercent: 30)));
+
     await _acneScanService.select(bytes);
-    final acneBytes = await _acneScanService.getAcneBytes();
+
+    emit(HomeScanInProgress(data.copyWith(scanPercent: 40)));
+
+    final result = await _acneScanService.getAcneBytes();
+
+    emit(HomeScanInProgress(data.copyWith(scanPercent: 70)));
+
+    Uint8List finalResult = await _nativeSkaiscan.applyAcneMaskColorV2(
+      maskBytes: result,
+      originBytes: bytes,
+      maskHeight: _acneScanService.outPutSize,
+      maskWidth: _acneScanService.outPutSize,
+      originHeight: cameraImage.height,
+      originWidth: cameraImage.width,
+    );
+
+    final rect = _uiRectangle;
+    if (rect != null) {
+      emit(HomeScanInProgress(data.copyWith(scanPercent: 80)));
+      finalResult = await _nativeOpencv.cropImageBytes(
+        bytes: finalResult,
+        rect: CvRectangle(
+          left: rect.left,
+          top: rect.top,
+          width: rect.width,
+          height: rect.height,
+        ),
+      );
+    }
+
+    // emit(HomeScanInProgress(data.copyWith(scanPercent: 100)));
+
+    emit(
+      HomeScanComplete(
+        state.data.copyWith(
+          captureBytes: finalResult,
+          scanPercent: 100,
+          allowScan: false,
+        ),
+      ),
+    );
+
+    _scanCompleter?.complete();
   }
 
   Future<void> _onLoaded(
