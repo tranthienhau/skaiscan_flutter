@@ -63,7 +63,11 @@ dependencies:
   dotted_border: ^2.0.0+2
   isolate_handler: ^1.0.0
   firebase_core: 1.1.0
-#  tflite_flutter: ^0.9.0
+  aws_s3_api: ^1.2.0
+  aws_s3_upload: ^1.2.0
+#  tflite_flutter_helper: ^0.3.1
+  tflite_flutter_helper:
+    path: ./packages/tflite_flutter_helper-0.3.1
   tflite_flutter:
     path: ./packages/tflite_flutter_plugin-0.9.0
   skaiscan_localizations:
@@ -105,8 +109,8 @@ flutter:
   assets:
     - assets/feature/
     - assets/icon/
-    - assets/model/unet_model.tflite
-    - assets/model/model_512.tflite
+    - assets/model/
+#    - assets/model/model_512.tflite
 
 flutter_gen:
   integrations:

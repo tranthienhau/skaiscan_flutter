@@ -1,24 +1,21 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
 import 'dart:math' as math;
 import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:bloc/bloc.dart';
 import 'package:camera/camera.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get_it/get_it.dart';
 
 // import 'package:google_vision_api/google_vision_api.dart';
 import 'package:image/image.dart' as imglib;
-import 'package:image/image.dart';
+import 'package:skaiscan/model/acne.dart';
 import 'package:skaiscan/services/acne_scan/acne_scan_service.dart';
 import 'package:skaiscan/services/camera_service.dart';
 import 'package:skaiscan/services/face_detection_service.dart';
-import 'package:skaiscan/services/image_converter.dart';
 import 'package:skaiscan/utils/utils.dart';
 import 'package:skaiscan_ffi/skaiscan_ffi.dart';
 import 'package:skaiscan_log_service/skaiscan_log_service.dart';
@@ -54,21 +51,23 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     //     faceDetectorService ?? GetIt.I<FaceDetectorService>();
     _faceDetectorService.initialize();
     on<HomeLoaded>(_onLoaded);
+    on<HomeAcneAssetScanned>(_onAcneAssetScanned);
     on<HomeAcneScanned>(_onAcneScanned);
     on<HomeCameraFaceChecked>(_onCameraFaceChecked);
+
     _cameraStreamSubscription = _cameraService.cameraImageStream
         .listen((CameraImage cameraImage) async {
-      if (_scanCompleter?.isCompleted ?? true) {
-        _cameraImage = cameraImage;
+      /// Check scan task is handling
+      if (!(_scanCompleter?.isCompleted ?? true)) {
+        return;
+      }
 
-        if (_cameraCheckCompleter?.isCompleted ?? true) {
-          add(HomeCameraFaceChecked(cameraImage));
-        }
+      /// Check other task is handing
+      if (_cameraCheckCompleter?.isCompleted ?? true) {
+        add(HomeCameraFaceChecked(cameraImage));
       }
     });
   }
-
-  // final _lock = Lock();
 
   final _nativeOpencv = NativeOpencv();
   final _nativeSkaiscan = NativeSkaiscan();
@@ -77,76 +76,70 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   late StreamSubscription _cameraStreamSubscription;
   late LogService _logService;
   late FaceDetectorService _faceDetectorService;
-
-  // late MLService _mlService;
-
-  // late FaceDetectorService _faceDetectorService;
-  // late VisionApiClient _visionApiClient;
   late AcneScanService _acneScanService;
   Completer<void>? _scanCompleter;
   Completer<void>? _cameraCheckCompleter;
   Rectangle<int>? _uiRectangle;
 
-  Uint8List concatenatePlanes(List<Plane> planes) {
-    final WriteBuffer allBytes = WriteBuffer();
-    for (final plane in planes) {
-      allBytes.putUint8List(plane.bytes);
-    }
-    return allBytes.done().buffer.asUint8List();
-  }
-
+  /// Check face is in correct view
   Future<void> _onCameraFaceChecked(
     HomeCameraFaceChecked event,
     Emitter<HomeState> emit,
   ) async {
+    /// Cancel current task when other task is handling
     if (!(_cameraCheckCompleter?.isCompleted ?? true)) {
       return;
     }
 
+    /// Lock task to handle in synchronization
     _cameraCheckCompleter = Completer<void>();
 
-    if (_uiRectangle == null) {
-      _calculateCropRectInImage(
-        Platform.isAndroid ? event.cameraImage.height : event.cameraImage.width,
-        Platform.isAndroid ? event.cameraImage.width : event.cameraImage.height,
-      );
-    }
-
-    // add(HomeAcneScanned());
+    ///Convert UI rect to image rect
+    _uiRectangle ??= _calculateCropRectInImage(
+      Platform.isAndroid ? event.cameraImage.height : event.cameraImage.width,
+      Platform.isAndroid ? event.cameraImage.width : event.cameraImage.height,
+    );
 
     try {
+      /// Get list face from camera image
       final faces =
           await _faceDetectorService.getFacesFromImage(event.cameraImage);
 
+      _logService.info('Face ${faces.length}');
+      ///Check if face list is isNotEmpty
       if (faces.isNotEmpty) {
-        final face = faces.first;
+        ///Get first rect face that is contained by [_uiRectangle]
+        for (final face in faces) {
+          ///check face is contain
+          final isContain = _uiRectangle?.containsRectangle(
+                Rectangle(face.left, face.top, face.width, face.height),
+              ) ??
+              false;
 
-        final isContain = _uiRectangle?.containsRectangle(
-              Rectangle(face.left, face.top, face.width, face.height),
-            ) ??
-            false;
-
-        if (isContain) {
-          emit(
-            HomeLoadSuccess(
-              state.data.copyWith(allowScan: true, scanPercent: 0),
-            ),
-          );
-        } else {
-          emit(
-            HomeLoadSuccess(state.data.copyWith(allowScan: false)),
-          );
+          if (isContain) {
+            /// Update UI to enable scan button
+            emit(
+              HomeLoadSuccess(
+                state.data.copyWith(allowScan: true, scanPercent: 0),
+              ),
+            );
+            _cameraCheckCompleter?.complete();
+            return;
+          }
         }
+
+        /// Update UI to disable scan button
+        emit(
+          HomeLoadSuccess(state.data.copyWith(allowScan: false)),
+        );
+        _cameraCheckCompleter?.complete();
+        return;
       }
-
-      // await _mlService.detectFace(flipOutputImage);
-
-      _cameraCheckCompleter?.complete();
-      return;
     } catch (e, stack) {
       _logService.error('Detect face error', e.toString(), stack);
     }
 
+    /// Update UI to disable scan button
     if (state.data.allowScan) {
       emit(
         HomeLoadSuccess(
@@ -155,13 +148,119 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       );
     }
 
+    /// Complete task
     _cameraCheckCompleter?.complete();
   }
 
+  /// Scan acne from assets file
+  Future<void> _onAcneAssetScanned(
+    HomeAcneAssetScanned event,
+    Emitter<HomeState> emit,
+  ) async {
+    if (!(_scanCompleter?.isCompleted ?? true)) {
+      return;
+    }
+
+    // _cameraService.stopImageStream();
+
+    _scanCompleter = Completer<void>();
+
+    final data = state.data;
+
+    ///Update progress to 10% for UI
+    emit(HomeScanInProgress(data.copyWith(scanPercent: 10)));
+
+    final byteData = await rootBundle.load(event.filePath);
+
+    final bytes = byteData.buffer.asUint8List();
+
+    final image = imglib.decodeImage(bytes);
+
+    if (image == null) {
+      return;
+    }
+
+    ///Convert UI rect to image rect
+    final Rectangle<int> cropRect =
+        _calculateCropRectInImage(image.width, image.height);
+
+    ///Update progress to 30% for UI
+    emit(HomeScanInProgress(data.copyWith(scanPercent: 30)));
+
+    await _acneScanService.selectImage(image);
+
+    ///Update progress to 40% for UI
+    emit(HomeScanInProgress(data.copyWith(scanPercent: 40)));
+
+    final result = await _acneScanService.getAcneBytes();
+
+    ///Update progress to 60% for UI
+    emit(HomeScanInProgress(data.copyWith(scanPercent: 60)));
+
+    Uint8List finalResult = await _nativeSkaiscan.applyAcneMaskColorV2(
+      maskBytes: Uint8List.fromList(result),
+      originBytes: bytes,
+      maskHeight: _acneScanService.outPutSize,
+      maskWidth: _acneScanService.outPutSize,
+      originHeight: image.height,
+      originWidth: image.width,
+    );
+
+    ///Filter to get only value different 0, 0-> background
+    final acneListFilter = result.toSet().where((element) => element != 0);
+
+    ///Convert filter array to acne list
+    /// 1 -> papules
+    /// 2 -> blackheads
+    /// 3 -> pustules
+    /// 4 -> whiteheads
+    final acneListResult =
+        acneListFilter.map((index) => Acne.values[index - 1]).toList();
+
+    ///Update progress to 80% for UI
+    emit(
+      HomeScanInProgress(
+        data.copyWith(
+          scanPercent: 80,
+        ),
+      ),
+    );
+
+    ///Crop image with UI rect
+    finalResult = await _nativeOpencv.cropImageBytes(
+      bytes: finalResult,
+      rect: CvRectangle(
+        left: cropRect.left,
+        top: cropRect.top,
+        width: cropRect.width,
+        height: cropRect.height,
+      ),
+    );
+
+    ///Update progress to 100% for UI and complete scan
+    emit(
+      HomeScanComplete(
+        data: state.data.copyWith(
+          captureBytes: finalResult,
+          scanPercent: 100,
+          allowScan: false,
+        ),
+        acneList: acneListResult,
+      ),
+    );
+
+    // _cameraService.stopImageStream();
+
+    /// Complete task
+    _scanCompleter?.complete();
+  }
+
+  /// Scan acne from camera image
   Future<void> _onAcneScanned(
     HomeAcneScanned event,
     Emitter<HomeState> emit,
   ) async {
+    /// Lock task to handle in synchronization
     if (!(_scanCompleter?.isCompleted ?? true)) {
       return;
     }
@@ -172,9 +271,11 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
     final data = state.data;
 
+    ///Update progress to 10% for UI
     emit(HomeScanInProgress(data.copyWith(scanPercent: 10)));
 
-    final bytes = await _nativeOpencv.createImageFromCameraImageToBytes(
+    /// Convert camera image to bytes
+    final bytes = await _nativeOpencv.convertCameraImageToBytes(
       yBytes: cameraImage.planes[0].bytes,
       uBytes: Platform.isAndroid ? cameraImage.planes[1].bytes : null,
       vBytes: Platform.isAndroid ? cameraImage.planes[2].bytes : null,
@@ -186,18 +287,24 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       height: cameraImage.height,
     );
 
+    ///Update progress to 20% for UI
     emit(HomeScanInProgress(data.copyWith(scanPercent: 30)));
 
+    /// Feed camera image to [_acneScanService] to get acne mask
     await _acneScanService.select(bytes);
 
+    ///Update progress to 40% for UI
     emit(HomeScanInProgress(data.copyWith(scanPercent: 40)));
 
+    /// Get scan acne mask
     final result = await _acneScanService.getAcneBytes();
 
-    emit(HomeScanInProgress(data.copyWith(scanPercent: 70)));
+    ///Update progress to 70% for UI
+    emit(HomeScanInProgress(data.copyWith(scanPercent: 60)));
 
+    /// Apply color for acne mask
     Uint8List finalResult = await _nativeSkaiscan.applyAcneMaskColorV2(
-      maskBytes: result,
+      maskBytes: Uint8List.fromList(result),
       originBytes: bytes,
       maskHeight: _acneScanService.outPutSize,
       maskWidth: _acneScanService.outPutSize,
@@ -205,9 +312,23 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       originWidth: cameraImage.width,
     );
 
+    ///Filter to get only value different 0, 0-> background
+    final acneListFilter = result.toSet().where((element) => element != 0);
+
+    ///Convert filter array to acne list
+    /// 1 -> papules
+    /// 2 -> blackheads
+    /// 3 -> pustules
+    /// 4 -> whiteheads
+    final acneListResult =
+        acneListFilter.map((index) => Acne.values[index - 1]).toList();
+
+    ///Crop image with UI rect
     final rect = _uiRectangle;
     if (rect != null) {
+      ///Update progress to 80% for UI
       emit(HomeScanInProgress(data.copyWith(scanPercent: 80)));
+
       finalResult = await _nativeOpencv.cropImageBytes(
         bytes: finalResult,
         rect: CvRectangle(
@@ -219,15 +340,15 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       );
     }
 
-    // emit(HomeScanInProgress(data.copyWith(scanPercent: 100)));
-
+    ///Update progress to 100% for UI and complete scan
     emit(
       HomeScanComplete(
-        state.data.copyWith(
+        data: state.data.copyWith(
           captureBytes: finalResult,
           scanPercent: 100,
           allowScan: false,
         ),
+        acneList: acneListResult,
       ),
     );
 
@@ -239,21 +360,15 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     Emitter<HomeState> emit,
   ) async {
     try {
+      /// Get all available cameras
       List<CameraDescription> cameras = await availableCameras();
 
-      // _visionApiClient.setApiConfig(ApiConfig(
-      //   url: 'https://vision.googleapis.com',
-      //   key: 'AIzaSyBOUAUQY1RRRqhR1vhXRDjZ3axMtvXUtbc',
-      //   version: 'v1',
-      // ));
-
+      ///Init acne scan service
       await _acneScanService.init();
-      // await _mlService.loadModel();
+
       emit(
         HomeLoadSuccess(
-          state.data.copyWith(
-            cameraDescriptionList: cameras,
-          ),
+          state.data.copyWith(cameraDescriptionList: cameras),
         ),
       );
     } catch (e, stack) {
@@ -268,6 +383,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     }
   }
 
+  /// Apply box fit algorithm to convert crop rectangle from UI view to Camera image
   FittedSizes applyBoxFit(BoxFit fit, Size inputSize, Size outputSize) {
     if (inputSize.height <= 0.0 ||
         inputSize.width <= 0.0 ||
@@ -343,20 +459,23 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     return FittedSizes(sourceSize, destinationSize);
   }
 
-  void _calculateCropRectInImage(int originWidth, int originHeight) {
+  ///Calculate rectangle from UI to crop rectangle in image
+  Rectangle<int> _calculateCropRectInImage(int originWidth, int originHeight) {
+    const offsetX = 12;
+    const offsetY = 12;
+
     ///calculate rectangle in camera
-    final top = ViewUtils.getPercentHeight(percent: 0.1083) - 12;
+    final top = ViewUtils.getPercentHeight(percent: 0.1083) - offsetY;
 
     final screenWidth = ViewUtils.getPercentWidth(percent: 1.0);
 
     final screenHeight = ViewUtils.getPercentHeight(percent: 1.0);
 
-    // const left = 27;
-    const left = 15;
+    const left = 27 - offsetX;
 
     final sizeX = screenWidth - left * 2;
 
-    final sizeY = (screenWidth - left * 2) * 1.2 + 12;
+    final sizeY = (screenWidth - left * 2) * 1.2 + offsetY;
 
     Alignment _resolvedAlignment = Alignment.center.resolve(TextDirection.ltr);
 
@@ -390,7 +509,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
     double targetBottom = targetTop + sizeY * (1 / scaleY);
 
-    _uiRectangle = Rectangle<int>(
+    return Rectangle<int>(
       targetLeft.toInt(),
       targetTop.toInt(),
       (targetRight - targetLeft).toInt(),
@@ -404,58 +523,4 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     _cameraStreamSubscription.cancel();
     return super.close();
   }
-}
-
-class DecodeParam {
-  final CameraImage image;
-  final SendPort sendPort;
-
-  DecodeParam({
-    required this.image,
-    required this.sendPort,
-  });
-}
-
-class DecodeResult {
-  final Uint8List bytes;
-  final String base64Image;
-
-  DecodeResult({required this.bytes, required this.base64Image});
-}
-
-void _decodeIsolate(DecodeParam param) {
-  // final image = decodeImage(param.image)!;
-  imglib.Image? image = convertToImage(param.image);
-  // final resizeImage = copyResize(image);
-  if (image == null) {
-    param.sendPort.send(null);
-    return;
-  }
-
-  final rotateImage = imglib.copyRotate(image, -90);
-  final flipOutputImage = imglib.flipHorizontal(rotateImage);
-  final pngBytes = Uint8List.fromList(encodePng(flipOutputImage));
-
-  final base64Image = base64.encode(pngBytes);
-
-  param.sendPort.send(DecodeResult(
-    bytes: pngBytes,
-    base64Image: base64Image,
-  ));
-}
-
-class DecodeBase64Param {
-  final Uint8List bytes;
-  final SendPort sendPort;
-
-  DecodeBase64Param({
-    required this.bytes,
-    required this.sendPort,
-  });
-}
-
-void _base64decodeIsolate(DecodeBase64Param param) {
-  final base64Image = base64.encode(param.bytes);
-
-  param.sendPort.send(base64Image);
 }

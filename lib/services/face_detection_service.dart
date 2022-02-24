@@ -131,7 +131,7 @@ class FaceDetectorService {
               ))
           .toList();
 
-      print('Face: ${rectList.length}');
+      // print('Face: ${rectList.length}');
       return rectList;
     }
   }
@@ -194,21 +194,26 @@ void _isolateFaceDetection(Map<String, dynamic> context) {
           inputImageData: _firebaseImageMetadata,
         );
 
-        List<Face> faces =
-            await faceDetector.processImage(_firebaseVisionImage);
+        try {
+          List<Face> faces =
+              await faceDetector.processImage(_firebaseVisionImage);
 
-        // print('face: ${faces.length}');
+          // print('face: ${faces.length}');
 
-        final faceRectList = faces
-            .map((face) => FaceRectangle(
-                  left: face.boundingBox.left.toInt(),
-                  top: face.boundingBox.top.toInt(),
-                  width: face.boundingBox.width.toInt(),
-                  height: face.boundingBox.height.toInt(),
-                ).toMap())
-            .toList();
+          final faceRectList = faces
+              .map((face) => FaceRectangle(
+                    left: face.boundingBox.left.toInt(),
+                    top: face.boundingBox.top.toInt(),
+                    width: face.boundingBox.width.toInt(),
+                    height: face.boundingBox.height.toInt(),
+                  ).toMap())
+              .toList();
 
-        messenger.send(faceRectList);
+          messenger.send(faceRectList);
+        } catch (e) {
+          messenger.send([]);
+        }
+
         break;
     }
 

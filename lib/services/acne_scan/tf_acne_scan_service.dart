@@ -11,7 +11,7 @@ import 'acne_scan_service.dart';
 const OUT_PUT_SIZE = 512;
 
 class TfAcneScanService implements AcneScanService {
-  late imglib.Image _image;
+  // late imglib.Image _image;
   Float32List? _float32Bytes;
   late Interpreter _interpreter;
   final _outputSize = OUT_PUT_SIZE;
@@ -22,61 +22,49 @@ class TfAcneScanService implements AcneScanService {
     final options = InterpreterOptions();
     options.threads = 4;
     // options.useNnApiForAndroid = true;
+    // options.useMetalDelegateForIOS = true;
 
     if (Platform.isAndroid) {
+      // _interpreter = await Interpreter.fromAsset('model/model_quant.tflite',
+      //     options: options);
       try {
         Delegate delegate = GpuDelegateV2(
             options: GpuDelegateOptionsV2(
-          isPrecisionLossAllowed: false,
+          isPrecisionLossAllowed: true,
           inferencePreference: TfLiteGpuInferenceUsage.fastSingleAnswer,
           inferencePriority1: TfLiteGpuInferencePriority.maxPrecision,
           inferencePriority2: TfLiteGpuInferencePriority.auto,
           inferencePriority3: TfLiteGpuInferencePriority.auto,
         ));
-        final interpreterOptions = InterpreterOptions()..addDelegate(delegate);
 
-        _interpreter = await Interpreter.fromAsset('model/model_512.tflite',
+        final interpreterOptions = InterpreterOptions()..addDelegate(delegate);
+        interpreterOptions.threads = 4;
+        interpreterOptions.useNnApiForAndroid = false;
+        _interpreter = await Interpreter.fromAsset('model/model_fpn512.tflite',
             options: interpreterOptions);
       } catch (e) {
-        _interpreter = await Interpreter.fromAsset('model/unet_model.tflite',
+        _interpreter = await Interpreter.fromAsset('model/model_fpn512.tflite',
             options: options);
       }
 
-      // _interpreter = await Interpreter.fromAsset('model/unet_model.tflite',
-      //     options: options);
     } else {
       try {
         Delegate delegate = GpuDelegate(
           options: GpuDelegateOptions(
-            enableQuantization: true,
-            allowPrecisionLoss: true,
+            enableQuantization: false,
+            allowPrecisionLoss: false,
             waitType: TFLGpuDelegateWaitType.active,
           ),
         );
         final interpreterOptions = InterpreterOptions()..addDelegate(delegate);
 
-        _interpreter = await Interpreter.fromAsset('model/model_512.tflite',
+        _interpreter = await Interpreter.fromAsset('model/model_fpn512.tflite',
             options: interpreterOptions);
       } catch (e) {
-        _interpreter = await Interpreter.fromAsset('model/unet_model.tflite',
+        _interpreter = await Interpreter.fromAsset('model/model_unet.tflite',
             options: options);
       }
     }
-
-    // try {
-    //   _interpreter = await Interpreter.fromAsset('model/unet_model.tflite',
-    //       options: options);
-    //   // _interpreter = await Interpreter.fromAsset('model/model_1024.tflite',
-    //   //     options: options);
-    // } catch (e, _) {
-    //   _interpreter = await Interpreter.fromAsset('model/unet_model.tflite',
-    //       options: options);
-    // }
-
-    // Tensor tensor = _interpreter.getOutputTensor(0);
-    print('Load model success');
-    // final outputTensor =
-    // Tensor(tfLiteInterpreterGetOutputTensor(_interpreter, index));
   }
 
   @override
@@ -87,29 +75,19 @@ class TfAcneScanService implements AcneScanService {
       throw Exception('Can not convert camera image to bytes');
     }
 
+    List inputReshape =
+        float32Bytes.reshape(<int>[1, _outputSize, _outputSize, 3]);
+
     // final outputData = [
     //   List.generate(
     //     _outputSize,
     //     (index) => List.generate(
     //       _outputSize,
-    //       (index) => List.generate(3, (index) => 0.0),
+    //       (index) => 0,
     //     ),
     //   ),
     // ];
-
-    List inputReshape =
-        float32Bytes.reshape(<int>[1, _outputSize, _outputSize, 3]);
-
-    // final recognitions = await Tflite.runModelOnBinary(
-    //     binary: float32Bytes.buffer.asUint8List(),// required
-    //     // numResults: 6,    // defaults to 5
-    //     // threshold: 0.05,  // defaults to 0.1
-    //     // asynch: true      // defaults to true
-    // );
-    //
-
-    // return Uint8List.fromList([]);
-    Completer<Uint8List> _resultCompleter = Completer<Uint8List>();
+    // Completer<List<int>> _resultCompleter = Completer<List<int>>();
 
     ///create receiport to get response
     final port = ReceivePort();
@@ -123,33 +101,17 @@ class TfAcneScanService implements AcneScanService {
         // 'output': outputData,
         'sendPort': port.sendPort,
       },
-      onError: port.sendPort,
+      // onError: port.sendPort,
       onExit: port.sendPort,
     );
 
-    late Uint8List bytes;
-    port.listen((message) {
-      ///ensure not call more than one times
-      if (_resultCompleter.isCompleted) {
-        return;
-      }
+    List<int>? bytes = (await port.first as List?)?.cast<int>();
 
-      if (message is Uint8List) {
-        bytes = message;
-        _resultCompleter.complete(message);
-      }
-    });
-
-    await _resultCompleter.future;
-
-    return bytes;
-    // return float32Bytes.buffer.asUint8List();
-  }
-
-  @override
-  Future<List<int>> getAllAcneList() {
-    // TODO: implement getAllAcneList
-    throw UnimplementedError();
+    if (bytes == null) {
+      return Uint8List.fromList([]);
+    }
+    Uint8List resultBytes = Uint8List.fromList(bytes);
+    return resultBytes;
   }
 
   @override
@@ -160,7 +122,7 @@ class TfAcneScanService implements AcneScanService {
       throw Exception('Can not convert camera image to bytes');
     }
 
-    _image = image.clone();
+    // _image = image;
 
     final resizeImage =
         imglib.copyResize(image, width: _outputSize, height: _outputSize);
@@ -172,9 +134,9 @@ class TfAcneScanService implements AcneScanService {
     for (int i = 0; i < _outputSize; i++) {
       for (int j = 0; j < _outputSize; j++) {
         final pixel = resizeImage.getPixel(j, i);
-        buffer[pixelIndex++] = (imglib.getRed(pixel) - 0) / 255;
-        buffer[pixelIndex++] = (imglib.getGreen(pixel) - 0) / 255;
-        buffer[pixelIndex++] = (imglib.getBlue(pixel) - 0) / 255;
+        buffer[pixelIndex++] = (imglib.getRed(pixel) - 0) / 255.0;
+        buffer[pixelIndex++] = (imglib.getGreen(pixel) - 0) / 255.0;
+        buffer[pixelIndex++] = (imglib.getBlue(pixel) - 0) / 255.0;
       }
     }
 
@@ -182,7 +144,7 @@ class TfAcneScanService implements AcneScanService {
   }
 
   @override
-  Future<void> selectCameraImage(imglib.Image image) async {
+  Future<void> selectImage(imglib.Image image) async {
     final resizeImage =
         imglib.copyResize(image, width: _outputSize, height: _outputSize);
 
@@ -208,7 +170,6 @@ class TfAcneScanService implements AcneScanService {
 
 void _isolateAcneScan(Map<String, dynamic> data) {
   final input = data['input'];
-  // final output = data['output'];
 
   final int interpreterTransformAddress = data['interpreter'];
 
@@ -216,17 +177,7 @@ void _isolateAcneScan(Map<String, dynamic> data) {
 
   final inputSize = data['inputSize'];
 
-  // final originImage = data['originImage'];
-
-  // final inputData = [
-  //   List.generate(
-  //     512,
-  //         (index) => List.generate(
-  //           512,
-  //           (index) => List.generate(3, (index) => 0.0),
-  //     ),
-  //   ),
-  // ];
+  // final output = data['output'];
 
   final inputs = <Object>[input];
 
@@ -234,18 +185,14 @@ void _isolateAcneScan(Map<String, dynamic> data) {
       Interpreter.fromAddress(interpreterTransformAddress);
 
   final outputs = <int, Object>{};
-
-  // final List<List<List<double>>> outputData = [
+  //
+  // final outputData = [
   //   List.generate(
   //     inputSize,
-  //     (index) => List.generate(1024, (index) => 0.0),
-  //   ),
-  // ];
-
-  // final List<List<List<List<double>>>> outputData = [
-  //   List.generate(
-  //     inputSize,
-  //         (index) => List.generate(1024, (index) => 0.0),
+  //     (index) => List.generate(
+  //       inputSize,
+  //       (index) => List.generate(5, (index) => 0.0),
+  //     ),
   //   ),
   // ];
 
@@ -254,20 +201,30 @@ void _isolateAcneScan(Map<String, dynamic> data) {
       inputSize,
       (index) => List.generate(
         inputSize,
-        (index) => List.generate(5, (index) => 0.0),
+        (index) => 0,
       ),
     ),
   ];
+
+  // TensorBuffer outPutBuffer = TensorBuffer.createFixedSize(
+  //     <int>[1, inputSize, inputSize], TfLiteType.uint8);
 
   outputs[0] = outputData;
 
   interpreterTransform.runForMultipleInputs(inputs, outputs);
 
-  final outputArray = _convertOutputToBytesArray(outputData);
+  // final outputArray = _convertOutputToBytesArray(outputData);
 
-  final byteArray = Uint8List.fromList(outputArray);
+  int unitValue = 72057594037927936;
 
-  sendPort.send(byteArray);
+  // final List<List<int>> outputArray = output as List<List<dynamic>>;
+
+  final flatten = outputData.flatten();
+
+  final List<int> normalArray =
+      flatten.map<int>((index) => (index / unitValue).toInt()).toList();
+
+  sendPort.send(normalArray);
 }
 
 List<int> _convertOutputToBytesArray(
@@ -286,60 +243,9 @@ List<int> _convertOutputToBytesArray(
         }
       }
 
-      // double value = ((4 - index) / 4) * 255;
-      // result.add(value.toInt());
-
       result.add(index);
     }
   }
 
   return result;
-}
-
-imglib.Image _convertOutputArrayToImage(
-    List<List<List<List<double>>>> imageArray, int inputSize) {
-  imglib.Image image = imglib.Image.rgb(inputSize, inputSize);
-  for (int x = 0; x < imageArray[0].length; x++) {
-    for (int y = 0; y < imageArray[0][0].length; y++) {
-      double max = 0;
-      int index = 0;
-      for (int z = 0; z < imageArray[0][0][0].length; z++) {
-        final value = imageArray[0][0][0][z];
-
-        if (max < value) {
-          max = value;
-          index = z;
-        }
-      }
-
-      image.setPixelRgba(x, y, index, index, index);
-
-      // rgba[i + 0] = input[j];
-      // rgba[i + 1] = input[j];
-      // rgba[i + 2] = input[j];
-      // rgba[i + 3] = 255;
-
-      // final r = (imageArray[0][x][y][0] * 255).toInt();
-      // final g = (imageArray[0][x][y][1] * 255).toInt();
-      // final b = (imageArray[0][x][y][2] * 255).toInt();
-      // image.setPixelRgba(x, y, r, g, b);
-    }
-  }
-
-  return image;
-}
-
-imglib.Image _convertArrayToImage(
-    List<List<List<List<double>>>> imageArray, int inputSize) {
-  imglib.Image image = imglib.Image.rgb(inputSize, inputSize);
-  for (int x = 0; x < imageArray[0].length; x++) {
-    for (int y = 0; y < imageArray[0][0].length; y++) {
-      final r = (imageArray[0][x][y][0] * 255).toInt();
-      final g = (imageArray[0][x][y][1] * 255).toInt();
-      final b = (imageArray[0][x][y][2] * 255).toInt();
-      image.setPixelRgba(x, y, r, g, b);
-    }
-  }
-
-  return image;
 }

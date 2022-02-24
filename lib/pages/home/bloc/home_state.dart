@@ -49,7 +49,8 @@ class HomeScanInProgress extends HomeState {
 }
 
 class HomeScanComplete extends HomeState {
-  const HomeScanComplete(HomeData data) : super(data);
+  const HomeScanComplete({required HomeData data,required this.acneList}) : super(data);
+  final List<Acne> acneList;
 }
 
 class HomeScanFailure extends HomeState {

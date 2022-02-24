@@ -10,6 +10,8 @@ import 'package:flutter/services.dart';
 class $AssetsFeatureGen {
   const $AssetsFeatureGen();
 
+  AssetGenImage get acneTest =>
+      const AssetGenImage('assets/feature/acne_test.png');
   SvgGenImage get onBoarding1 =>
       const SvgGenImage('assets/feature/on_boarding_1.svg');
   SvgGenImage get onBoarding2 =>
@@ -25,11 +27,19 @@ class $AssetsIconGen {
   SvgGenImage get logo => const SvgGenImage('assets/icon/logo.svg');
 }
 
+class $AssetsModelGen {
+  const $AssetsModelGen();
+
+  String get model512 => 'assets/model/model_512.tflite';
+  String get unetModel => 'assets/model/unet_model.tflite';
+}
+
 class Assets {
   Assets._();
 
   static const $AssetsFeatureGen feature = $AssetsFeatureGen();
   static const $AssetsIconGen icon = $AssetsIconGen();
+  static const $AssetsModelGen model = $AssetsModelGen();
 }
 
 class AssetGenImage extends AssetImage {

@@ -53,7 +53,7 @@ class _ScannedAcneResultPageState extends State<ScannedAcneResultPage> {
 
   Widget _buildAcneList() {
     return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       itemCount: widget.args.acneList.length,
       separatorBuilder: (BuildContext context, int index) {
         return 24.toVSizeBox();

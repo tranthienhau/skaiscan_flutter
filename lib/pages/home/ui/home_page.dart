@@ -56,33 +56,11 @@ class _HomePageState extends State<HomePage> {
           App.pushNamed(
             AppRoutes.scannedAcneResult,
             AcneScanArgs(
-              acneList: [],
+              acneList: state.acneList,
               scanBytes: result,
             ),
           );
 
-          // showDialog<String>(
-          //   context: context,
-          //   builder: (BuildContext context) => AlertDialog(
-          //     contentPadding: EdgeInsets.zero,
-          //     insetPadding: EdgeInsets.zero,
-          //     actionsPadding: EdgeInsets.zero,
-          //     buttonPadding: EdgeInsets.zero,
-          //     titlePadding: EdgeInsets.zero,
-          //     title: const Text('AlertDialog Title'),
-          //     content: Image.memory(result),
-          //     actions: <Widget>[
-          //       TextButton(
-          //         onPressed: () => Navigator.pop(context, 'Cancel'),
-          //         child: const Text('Cancel'),
-          //       ),
-          //       TextButton(
-          //         onPressed: () => Navigator.pop(context, 'OK'),
-          //         child: const Text('OK'),
-          //       ),
-          //     ],
-          //   ),
-          // );
         }
       },
       builder: (context, state) {
@@ -230,7 +208,7 @@ class _CameraViewState extends State<CameraView> {
                     ),
                   ),
                 ),
-              if (state.data.allowScan)
+              // if (state.data.allowScan)
                 Positioned(
                   left: 16,
                   right: 16,
@@ -259,15 +237,7 @@ class _CameraViewState extends State<CameraView> {
       onPressed: () async {
         _showProgressDialog(context, BlocProvider.of<HomeBloc>(context));
         BlocProvider.of<HomeBloc>(context).add(HomeAcneScanned());
-        // try {
-        //   await _cameraService.stopImageStream();
-        // } catch (_) {}
-        //
-        // final XFile? file = await _controller?.takePicture();
-        // if (file != null) {
-        //   _showProgressDialog(context, BlocProvider.of<HomeBloc>(context));
-        //   BlocProvider.of<HomeBloc>(context).add(HomeAcneScanned(file));
-        // }
+        // BlocProvider.of<HomeBloc>(context).add(HomeAcneAssetScanned('assets/feature/acne_test.png'));
       },
     );
   }

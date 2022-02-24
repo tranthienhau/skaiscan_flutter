@@ -122,9 +122,7 @@ apply_acne_mask_color_v2(uint8_t *mask_bytes, uint8_t *origin_bytes, int32_t *im
 
     cvtColor(acne_mask, acne_mask, COLOR_GRAY2BGR);
 
-    Mat origin_resize;
-
-    resize(origin_mat_bgra, origin_resize, acne_mask.size(), INTER_LINEAR);
+//    resize(origin_mat_bgra, origin_resize, acne_mask.size(), INTER_LINEAR);
 
 
     Mat channels[] = {Mat(256, 1, CV_8U, b), Mat(256, 1, CV_8U, g), Mat(256, 1, CV_8U, r)};
@@ -132,24 +130,34 @@ apply_acne_mask_color_v2(uint8_t *mask_bytes, uint8_t *origin_bytes, int32_t *im
     merge(channels, 3, lut);
 
     Mat mask_color;
+    
     LUT(acne_mask, lut, mask_color);
+    
     Mat result_mask;
-    convert_black_to_transperant(acne_mask, result_mask);
+    
+    convert_black_to_transperant(mask_color, result_mask);
 
+    resize(result_mask, result_mask, origin_mat_bgra.size(), INTER_LINEAR);
+    
     GaussianBlur(result_mask, result_mask, Size(11, 11), 0);
 
+    Mat result;
+    
     addWeighted(result_mask,
-                1, origin_resize, 1.0, 0, origin_resize);
+                1, origin_mat_bgra, 1.0, 0, result);
 
-    resize(origin_resize, origin_resize, origin_mat_bgra.size(), INTER_LINEAR);
+//    resize(origin_resize, origin_resize, origin_mat_bgra.size(), INTER_LINEAR);
 
     std::vector<uchar> buf(1);
-    cv::imencode(".bmp", origin_resize, buf);
+    
+    cv::imencode(".bmp", result, buf);
+    
     *imgLengthBytes = static_cast<int32_t>(buf.size());
 
     unsigned char *ret = (unsigned char *) malloc(buf.size());
+    
     memcpy(ret, buf.data(), buf.size());
-//
+
 //    result_mask.release();
 //    lut.release();
 //    mask_color.release();

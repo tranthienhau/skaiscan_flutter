@@ -11,9 +11,7 @@ abstract class AcneScanService {
 
   Future<void> select(Uint8List bytes);
 
-  Future<void> selectCameraImage(imglib.Image image);
-
-  Future<List<int>> getAllAcneList();
+  Future<void> selectImage(imglib.Image image);
 
   Future<Uint8List> getAcneBytes();
 }

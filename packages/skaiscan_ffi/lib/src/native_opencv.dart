@@ -318,7 +318,7 @@ class NativeOpencv {
     return imageData;
   }
 
-  Future<Uint8List> createImageFromCameraImageToBytes({
+  Future<Uint8List> convertCameraImageToBytes({
     required Uint8List yBytes,
     required Uint8List? uBytes,
     required Uint8List? vBytes,

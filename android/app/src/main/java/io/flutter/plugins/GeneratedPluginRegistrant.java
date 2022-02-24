@@ -61,9 +61,9 @@ public final class GeneratedPluginRegistrant {
       Log.e(TAG, "Error registering plugin skaiscan_ffi, com.skaiscan.skaiscan_ffi.SkaiscanFfiPlugin", e);
     }
     try {
-      flutterEngine.getPlugins().add(new com.tfliteflutter.tflite_flutter_plugin.TfliteFlutterPlugin());
+      flutterEngine.getPlugins().add(new com.tfliteflutter.tflite_flutter_helper.TfliteFlutterHelperPlugin());
     } catch(Exception e) {
-      Log.e(TAG, "Error registering plugin tflite_flutter, com.tfliteflutter.tflite_flutter_plugin.TfliteFlutterPlugin", e);
+      Log.e(TAG, "Error registering plugin tflite_flutter_helper, com.tfliteflutter.tflite_flutter_helper.TfliteFlutterHelperPlugin", e);
     }
   }
 }
