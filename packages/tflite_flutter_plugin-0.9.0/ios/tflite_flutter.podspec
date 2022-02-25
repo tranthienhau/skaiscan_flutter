@@ -18,7 +18,6 @@ TensorFlow Lite plugin for Flutter apps.
   s.platform = :ios, '8.0'
 
   s.ios.vendored_frameworks = 'TensorFlowLiteC.framework', 'TensorFlowLiteCMetal.framework'
-  s.xcconfig = { 'OTHER_LDFLAGS' => '-framework TensorFlowLiteC -all_load -framework TensorFlowLiteCMetal -all_load' }
 
 #   s.ios.vendored_frameworks = 'TensorFlowLiteC.framework'
   s.ios.deployment_target = '9.0'
@@ -26,6 +25,9 @@ TensorFlow Lite plugin for Flutter apps.
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'VALID_ARCHS[sdk=iphonesimulator*]' => 'x86_64' }
   s.swift_version = '5.0'
   s.library = 'c++'
+#   s.module_map = 'tflite_flutter.modulemap'
   # Fail early during build instead of not finding the library during runtime
 #   s.xcconfig = { 'OTHER_LDFLAGS' => '-framework TensorFlowLiteC -all_load' }
+  s.xcconfig = { 'OTHER_LDFLAGS' => '-framework TensorFlowLiteC -all_load -framework TensorFlowLiteCMetal -all_load' }
+
 end

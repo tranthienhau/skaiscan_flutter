@@ -186,6 +186,7 @@ void _isolateApplyAcneMaskColorV2(Map<String, dynamic> data) {
   malloc.free(imgByteLength);
   malloc.free(maskPointer);
   malloc.free(resultPtr);
+  malloc.free(originPointer);
 
   sendPort.send(copyBytes);
 }

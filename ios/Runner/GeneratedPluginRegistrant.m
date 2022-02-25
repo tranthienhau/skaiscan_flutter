@@ -54,6 +54,12 @@
 @import skaiscan_ffi;
 #endif
 
+#if __has_include(<tflite_flutter/TfliteFlutterPlugin.h>)
+#import <tflite_flutter/TfliteFlutterPlugin.h>
+#else
+@import tflite_flutter;
+#endif
+
 #if __has_include(<tflite_flutter_helper/TfliteFlutterHelperPlugin.h>)
 #import <tflite_flutter_helper/TfliteFlutterHelperPlugin.h>
 #else
@@ -71,6 +77,7 @@
   [FLTPathProviderPlugin registerWithRegistrar:[registry registrarForPlugin:@"FLTPathProviderPlugin"]];
   [PermissionHandlerPlugin registerWithRegistrar:[registry registrarForPlugin:@"PermissionHandlerPlugin"]];
   [SkaiscanFfiPlugin registerWithRegistrar:[registry registrarForPlugin:@"SkaiscanFfiPlugin"]];
+  [TfliteFlutterPlugin registerWithRegistrar:[registry registrarForPlugin:@"TfliteFlutterPlugin"]];
   [TfliteFlutterHelperPlugin registerWithRegistrar:[registry registrarForPlugin:@"TfliteFlutterHelperPlugin"]];
 }
 

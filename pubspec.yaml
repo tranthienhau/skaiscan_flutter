@@ -64,8 +64,12 @@ dependencies:
   isolate_handler: ^1.0.0
   firebase_core: 1.1.0
   aws_s3_api: ^1.2.0
-  aws_s3_upload: ^1.2.0
+  uuid: ^3.0.6
+#  aws_s3_upload: ^1.2.0
+  aws_s3_upload:
+    path: ./packages/aws_s3_upload
 #  tflite_flutter_helper: ^0.3.1
+#  tflite_flutter: ^0.9.0
   tflite_flutter_helper:
     path: ./packages/tflite_flutter_helper-0.3.1
   tflite_flutter:

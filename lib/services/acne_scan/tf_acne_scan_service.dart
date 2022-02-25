@@ -25,28 +25,28 @@ class TfAcneScanService implements AcneScanService {
     // options.useMetalDelegateForIOS = true;
 
     if (Platform.isAndroid) {
-      // _interpreter = await Interpreter.fromAsset('model/model_quant.tflite',
-      //     options: options);
       try {
-        Delegate delegate = GpuDelegateV2(
-            options: GpuDelegateOptionsV2(
-          isPrecisionLossAllowed: true,
-          inferencePreference: TfLiteGpuInferenceUsage.fastSingleAnswer,
-          inferencePriority1: TfLiteGpuInferencePriority.maxPrecision,
-          inferencePriority2: TfLiteGpuInferencePriority.auto,
-          inferencePriority3: TfLiteGpuInferencePriority.auto,
-        ));
+        // Delegate delegate = GpuDelegateV2(
+        //     options: GpuDelegateOptionsV2(
+        //   isPrecisionLossAllowed: true,
+        //   inferencePreference: TfLiteGpuInferenceUsage.fastSingleAnswer,
+        //   inferencePriority1: TfLiteGpuInferencePriority.maxPrecision,
+        //   inferencePriority2: TfLiteGpuInferencePriority.auto,
+        //   inferencePriority3: TfLiteGpuInferencePriority.auto,
+        // ));
+        //
+        // final interpreterOptions = InterpreterOptions()..addDelegate(delegate);
+        // interpreterOptions.threads = 4;
+        // interpreterOptions.useNnApiForAndroid = true;
+        // _interpreter = await Interpreter.fromAsset('model/model_fpn512.tflite',
+        //     options: interpreterOptions);
 
-        final interpreterOptions = InterpreterOptions()..addDelegate(delegate);
-        interpreterOptions.threads = 4;
-        interpreterOptions.useNnApiForAndroid = false;
-        _interpreter = await Interpreter.fromAsset('model/model_fpn512.tflite',
-            options: interpreterOptions);
-      } catch (e) {
         _interpreter = await Interpreter.fromAsset('model/model_fpn512.tflite',
             options: options);
+      } catch (e) {
+        _interpreter = await Interpreter.fromAsset('model/model_quant.tflite',
+            options: options);
       }
-
     } else {
       try {
         Delegate delegate = GpuDelegate(
@@ -57,12 +57,22 @@ class TfAcneScanService implements AcneScanService {
           ),
         );
         final interpreterOptions = InterpreterOptions()..addDelegate(delegate);
-
+        interpreterOptions.threads = 4;
         _interpreter = await Interpreter.fromAsset('model/model_fpn512.tflite',
             options: interpreterOptions);
       } catch (e) {
-        _interpreter = await Interpreter.fromAsset('model/model_unet.tflite',
-            options: options);
+        ///Load model
+        Delegate delegate = GpuDelegate(
+          options: GpuDelegateOptions(
+            enableQuantization: false,
+            allowPrecisionLoss: false,
+            waitType: TFLGpuDelegateWaitType.active,
+          ),
+        );
+        final interpreterOptions = InterpreterOptions()..addDelegate(delegate);
+        interpreterOptions.threads = 4;
+        _interpreter = await Interpreter.fromAsset('model/model_quant.tflite',
+            options: interpreterOptions);
       }
     }
   }

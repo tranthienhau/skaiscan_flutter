@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:aws_s3_upload/aws_s3_upload.dart';
 import 'package:bloc/bloc.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +20,7 @@ import 'package:skaiscan/services/face_detection_service.dart';
 import 'package:skaiscan/utils/utils.dart';
 import 'package:skaiscan_ffi/skaiscan_ffi.dart';
 import 'package:skaiscan_log_service/skaiscan_log_service.dart';
+import 'package:uuid/uuid.dart';
 
 part 'home_event.dart';
 
@@ -61,6 +63,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       if (!(_scanCompleter?.isCompleted ?? true)) {
         return;
       }
+
+      _cameraImage = cameraImage;
 
       /// Check other task is handing
       if (_cameraCheckCompleter?.isCompleted ?? true) {
@@ -106,6 +110,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
           await _faceDetectorService.getFacesFromImage(event.cameraImage);
 
       _logService.info('Face ${faces.length}');
+
       ///Check if face list is isNotEmpty
       if (faces.isNotEmpty) {
         ///Get first rect face that is contained by [_uiRectangle]
@@ -161,14 +166,9 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       return;
     }
 
-    // _cameraService.stopImageStream();
-
     _scanCompleter = Completer<void>();
 
     final data = state.data;
-
-    ///Update progress to 10% for UI
-    emit(HomeScanInProgress(data.copyWith(scanPercent: 10)));
 
     final byteData = await rootBundle.load(event.filePath);
 
@@ -176,21 +176,41 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
     final image = imglib.decodeImage(bytes);
 
+    ///Update progress to 10% for UI
+    emit(HomeScanInProgress(data.copyWith(scanPercent: 10)));
+
     if (image == null) {
       return;
     }
+
+    const uuid = Uuid();
+
+    try {
+      await AwsS3.uploadBytes(
+        bytes: imglib.encodeJpg(image),
+        accessKey: 'AKIASTXIMYTMY4CZ37ZO',
+        bucket: 'skaiscan-collect',
+        fileName: '${uuid.v1()}.jpeg',
+        secretKey: 'hh7l5aV6hyt0L5CmDDbBTXSCe2VlAkjaa6N/OGRC',
+        // acl: ,
+        destDir: '',
+        region: 'eu-central-1',
+      );
+    } catch (e, stack) {
+      _logService.error('Failed upload image', e.toString(), stack);
+    }
+
+    ///Update progress to 30% for UI
+    emit(HomeScanInProgress(data.copyWith(scanPercent: 30)));
 
     ///Convert UI rect to image rect
     final Rectangle<int> cropRect =
         _calculateCropRectInImage(image.width, image.height);
 
-    ///Update progress to 30% for UI
-    emit(HomeScanInProgress(data.copyWith(scanPercent: 30)));
-
     await _acneScanService.selectImage(image);
 
-    ///Update progress to 40% for UI
-    emit(HomeScanInProgress(data.copyWith(scanPercent: 40)));
+    ///Update progress to 50% for UI
+    emit(HomeScanInProgress(data.copyWith(scanPercent: 50)));
 
     final result = await _acneScanService.getAcneBytes();
 
@@ -287,11 +307,40 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       height: cameraImage.height,
     );
 
+    final image = imglib.decodeImage(bytes);
+
+    if (image == null) {
+      _scanCompleter?.complete();
+
+      emit(HomeScanFailure(state.data, 'Can not scan acne. Please try again!'));
+      return;
+    }
+
+    ///Update progress to 20% for UI
+    emit(HomeScanInProgress(data.copyWith(scanPercent: 20)));
+
+    const uuid = Uuid();
+
+    try {
+      await AwsS3.uploadBytes(
+        bytes: imglib.encodeJpg(image),
+        accessKey: 'AKIASTXIMYTMY4CZ37ZO',
+        bucket: 'skaiscan-collect',
+        fileName: '${uuid.v1()}.jpeg',
+        secretKey: 'hh7l5aV6hyt0L5CmDDbBTXSCe2VlAkjaa6N/OGRC',
+        // acl: ,
+        destDir: '',
+        region: 'eu-central-1',
+      );
+    } catch (e, stack) {
+      _logService.error('Failed upload image', e.toString(), stack);
+    }
+
     ///Update progress to 20% for UI
     emit(HomeScanInProgress(data.copyWith(scanPercent: 30)));
 
     /// Feed camera image to [_acneScanService] to get acne mask
-    await _acneScanService.select(bytes);
+    await _acneScanService.selectImage(image);
 
     ///Update progress to 40% for UI
     emit(HomeScanInProgress(data.copyWith(scanPercent: 40)));
@@ -495,8 +544,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     final Rect sourceRect =
         _resolvedAlignment.inscribe(sizes.source, Offset.zero & childSize);
 
-    final Rect destinationRect =
-        _resolvedAlignment.inscribe(sizes.destination, Offset.zero & target);
+    // final Rect destinationRect =
+    //     _resolvedAlignment.inscribe(sizes.destination, Offset.zero & target);
 
     // double offsetLeft = left - destinationRect.left;
     // offsetLeft = offsetLeft < 0 ? 0 : offsetLeft;
