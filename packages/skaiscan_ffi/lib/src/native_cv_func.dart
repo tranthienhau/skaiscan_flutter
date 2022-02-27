@@ -61,20 +61,20 @@ final Pointer<Void> Function(
                     Int32)>>('create_mat_from_yuv')
         .asFunction();
 
-final Pointer<Uint32> Function(
-        Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>, int, int, int, int)
-    nativeConvertYUV420ToRBGA = nativeLib
-        .lookup<
-            NativeFunction<
-                Pointer<Uint32> Function(
-                    Pointer<Uint8>,
-                    Pointer<Uint8>,
-                    Pointer<Uint8>,
-                    Int32,
-                    Int32,
-                    Int32,
-                    Int32)>>('convert_yuv_to_rbga_bytes')
-        .asFunction();
+// final Pointer<Uint32> Function(
+//         Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>, int, int, int, int)
+//     nativeConvertYUV420ToRBGA = nativeLib
+//         .lookup<
+//             NativeFunction<
+//                 Pointer<Uint32> Function(
+//                     Pointer<Uint8>,
+//                     Pointer<Uint8>,
+//                     Pointer<Uint8>,
+//                     Int32,
+//                     Int32,
+//                     Int32,
+//                     Int32)>>('convert_yuv_to_rbga_bytes')
+//         .asFunction();
 
 final Pointer<Void> Function(
         Pointer<Uint8> bytes, bool isYUV, int rotation, int width, int height)
@@ -96,21 +96,21 @@ final Pointer<Void> Function(
 //
 // create_mat_from_bgra_bytes
 
-final Pointer<Void> Function(Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>,
-        bool, int, int, int, int) converCameraImageToMatV2 =
-    nativeLib
-        .lookup<
-            NativeFunction<
-                Pointer<Void> Function(
-                    Pointer<Uint8>,
-                    Pointer<Uint8>,
-                    Pointer<Uint8>,
-                    Bool,
-                    Int32,
-                    Int32,
-                    Int32,
-                    Int32)>>('convert_camera_image_to_mat_v2')
-        .asFunction();
+// final Pointer<Void> Function(Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>,
+//         bool, int, int, int, int) converCameraImageToMatV2 =
+//     nativeLib
+//         .lookup<
+//             NativeFunction<
+//                 Pointer<Void> Function(
+//                     Pointer<Uint8>,
+//                     Pointer<Uint8>,
+//                     Pointer<Uint8>,
+//                     Bool,
+//                     Int32,
+//                     Int32,
+//                     Int32,
+//                     Int32)>>('convert_camera_image_to_mat_v2')
+//         .asFunction();
 final Pointer<Uint8> Function(Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>,
         Pointer<Int32>, bool, int, int, int, int) converCameraImageToMatV3 =
     nativeLib

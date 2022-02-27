@@ -65,6 +65,18 @@ struct NativeRectangle {
 //      this->blue = blue;
 //  };
 //};
+int clamp(int lower, int higher, int val) {
+    if (val < lower)
+        return 0;
+    else if (val > higher)
+        return 255;
+    else
+        return val;
+}
+
+int getRotatedImageByteIndex(int x, int y, int rotatedImageWidth) {
+    return rotatedImageWidth * (y + 1) - (x + 1);
+}
 
 
 
@@ -79,6 +91,43 @@ void rotateMat(Mat &matImage, int rotation) {
         flip(matImage, matImage, -1);    //flip(-1)=180
     }
 }
+
+uint32_t *
+convert_yuv_to_rbga_bytes(uint8_t *plane0, uint8_t *plane1, uint8_t *plane2, int bytesPerRow,
+                          int bytesPerPixel, int width, int height) {
+    int hexFF = 255;
+    int x, y, uvIndex, index;
+    int yp, up, vp;
+    int r, g, b;
+    int rt, gt, bt;
+
+    uint32_t *image = (uint32_t *) malloc(sizeof(uint32_t) * (width * height));
+
+    for (x = 0; x < width; x++) {
+        for (y = 0; y < height; y++) {
+
+            uvIndex = bytesPerPixel * ((int) floor(x / 2)) + bytesPerRow * ((int) floor(y / 2));
+            index = y * width + x;
+
+            yp = plane0[index];
+            up = plane1[uvIndex];
+            vp = plane2[uvIndex];
+            rt = round(yp + vp * 1436 / 1024 - 179);
+            gt = round(yp - up * 46549 / 131072 + 44 - vp * 93604 / 131072 + 91);
+            bt = round(yp + up * 1814 / 1024 - 227);
+            r = clamp(0, 255, rt);
+            g = clamp(0, 255, gt);
+            b = clamp(0, 255, bt);
+            image[getRotatedImageByteIndex(y, x, height)] =
+                    (hexFF << 24) | (b << 16) | (g << 8) | r;
+//                image[getRotatedImageByteIndex(y, x, height)] = (hexFF << 24) | (r << 16) | (g << 8) | b;
+        }
+    }
+
+    return image;
+}
+
+
 
 // Avoiding name mangling
 extern "C" {
@@ -159,18 +208,6 @@ void *create_mat_pointer_from_path(char *inputImagePath) {
     return matPointer;
 }
 
-int clamp(int lower, int higher, int val) {
-    if (val < lower)
-        return 0;
-    else if (val > higher)
-        return 255;
-    else
-        return val;
-}
-
-int getRotatedImageByteIndex(int x, int y, int rotatedImageWidth) {
-    return rotatedImageWidth * (y + 1) - (x + 1);
-}
 
 //    Mat* global_bgra_mat_ptr = nullptr;
 FUNCTION_ATTRIBUTE
@@ -207,76 +244,41 @@ Mat *convert_camera_image_to_mat(unsigned char *bytes, bool is_yuv, int rotation
 }
 
 
-FUNCTION_ATTRIBUTE
-uint32_t *
-convert_yuv_to_rbga_bytes(uint8_t *plane0, uint8_t *plane1, uint8_t *plane2, int bytesPerRow,
-                          int bytesPerPixel, int width, int height) {
-    int hexFF = 255;
-    int x, y, uvIndex, index;
-    int yp, up, vp;
-    int r, g, b;
-    int rt, gt, bt;
+//FUNCTION_ATTRIBUTE
 
-    uint32_t *image = (uint32_t *) malloc(sizeof(uint32_t) * (width * height));
+//Mat *global_mat_ptr = nullptr;
 
-    for (x = 0; x < width; x++) {
-        for (y = 0; y < height; y++) {
-
-            uvIndex = bytesPerPixel * ((int) floor(x / 2)) + bytesPerRow * ((int) floor(y / 2));
-            index = y * width + x;
-
-            yp = plane0[index];
-            up = plane1[uvIndex];
-            vp = plane2[uvIndex];
-            rt = round(yp + vp * 1436 / 1024 - 179);
-            gt = round(yp - up * 46549 / 131072 + 44 - vp * 93604 / 131072 + 91);
-            bt = round(yp + up * 1814 / 1024 - 227);
-            r = clamp(0, 255, rt);
-            g = clamp(0, 255, gt);
-            b = clamp(0, 255, bt);
-            image[getRotatedImageByteIndex(y, x, height)] =
-                    (hexFF << 24) | (b << 16) | (g << 8) | r;
-//                image[getRotatedImageByteIndex(y, x, height)] = (hexFF << 24) | (r << 16) | (g << 8) | b;
-        }
-    }
-
-    return image;
-}
-
-
-Mat *global_mat_ptr = nullptr;
-
-FUNCTION_ATTRIBUTE
-Mat *convert_camera_image_to_mat_v2(uint8_t *plane0, uint8_t *plane1, uint8_t *plane2, bool is_yuv,
-                                    int bytesPerRow, int bytesPerPixel, int width, int height) {
-
-    Mat frame;
-
-    uint32_t *rgba_bytes = nullptr;
-
-    if (is_yuv) {
-        rgba_bytes = convert_yuv_to_rbga_bytes(plane0, plane1, plane2, bytesPerRow, bytesPerPixel,
-                                               width, height);
-        cv::Mat rgba_mat((width), (height), CV_8UC4, rgba_bytes);
-        cvtColor(rgba_mat, frame, COLOR_RGBA2BGRA);
-        flip(frame, frame, 0);
-
-    } else {
-        frame = Mat(height, width, CV_8UC4, plane0);
-    }
-
-    Mat *mat_ptr = new Mat();
-
-    *mat_ptr = frame.clone();
-
-    if (is_yuv) {
-        delete[] rgba_bytes;
-    }
-
-    frame.release();
-
-    return mat_ptr;
-}
+//FUNCTION_ATTRIBUTE
+//Mat *convert_camera_image_to_mat_v2(uint8_t *plane0, uint8_t *plane1, uint8_t *plane2, bool is_yuv,
+//                                    int bytesPerRow, int bytesPerPixel, int width, int height) {
+//
+//    Mat frame;
+//
+//    uint32_t *rgba_bytes = nullptr;
+//
+//    if (is_yuv) {
+//        rgba_bytes = convert_yuv_to_rbga_bytes(plane0, plane1, plane2, bytesPerRow, bytesPerPixel,
+//                                               width, height);
+//        cv::Mat rgba_mat((width), (height), CV_8UC4, rgba_bytes);
+//        cvtColor(rgba_mat, frame, COLOR_RGBA2BGRA);
+//        flip(frame, frame, 0);
+//
+//    } else {
+//        frame = Mat(height, width, CV_8UC4, plane0);
+//    }
+//
+//    Mat *mat_ptr = new Mat();
+//
+//    *mat_ptr = frame.clone();
+//
+//    if (is_yuv) {
+//        delete[] rgba_bytes;
+//    }
+//
+//    frame.release();
+//
+//    return mat_ptr;
+//}
 
 FUNCTION_ATTRIBUTE
 unsigned char *convert_camera_image_to_mat_v3(uint8_t *plane0, uint8_t *plane1, uint8_t *plane2,
@@ -416,31 +418,31 @@ void *crop_image_bytes(unsigned char *bytes, int32_t *imgLengthBytes, int32_t x,
 }
 
 
-
-void convert_black_to_transperant(Mat &mask) {
-
-    Mat gray, thresh_hold;
-
-    cvtColor(mask, gray, COLOR_BGR2GRAY);
-
-    threshold(gray, thresh_hold, 0, 255, THRESH_BINARY);
-
-    Mat bgra[4];
-    split(mask, bgra);
-
-    vector<Mat> mask_channels;
-
-    mask_channels.push_back(bgra[0]);
-    mask_channels.push_back(bgra[1]);
-    mask_channels.push_back(bgra[2]);
-    mask_channels.push_back(thresh_hold);
-
-    merge(mask_channels, mask);
-
-    gray.release();
-
-    thresh_hold.release();
-}
-
+//
+//void convert_black_to_transperant(Mat &mask) {
+//
+//    Mat gray, thresh_hold;
+//
+//    cvtColor(mask, gray, COLOR_BGR2GRAY);
+//
+//    threshold(gray, thresh_hold, 0, 255, THRESH_BINARY);
+//
+//    Mat bgra[4];
+//    split(mask, bgra);
+//
+//    vector<Mat> mask_channels;
+//
+//    mask_channels.push_back(bgra[0]);
+//    mask_channels.push_back(bgra[1]);
+//    mask_channels.push_back(bgra[2]);
+//    mask_channels.push_back(thresh_hold);
+//
+//    merge(mask_channels, mask);
+//
+//    gray.release();
+//
+//    thresh_hold.release();
+//}
+//
 
 }

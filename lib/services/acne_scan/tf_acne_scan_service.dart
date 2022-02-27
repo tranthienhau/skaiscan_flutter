@@ -58,23 +58,36 @@ class TfAcneScanService implements AcneScanService {
         );
         final interpreterOptions = InterpreterOptions()..addDelegate(delegate);
         interpreterOptions.threads = 4;
+
         _interpreter = await Interpreter.fromAsset('model/model_fpn512.tflite',
             options: interpreterOptions);
+        // _interpreter = await Interpreter.fromAsset('model/model_fpn512.tflite',
+        //     options: options);
       } catch (e) {
         ///Load model
-        Delegate delegate = GpuDelegate(
-          options: GpuDelegateOptions(
-            enableQuantization: false,
-            allowPrecisionLoss: false,
-            waitType: TFLGpuDelegateWaitType.active,
-          ),
-        );
-        final interpreterOptions = InterpreterOptions()..addDelegate(delegate);
-        interpreterOptions.threads = 4;
+        // Delegate delegate = GpuDelegate(
+        //   options: GpuDelegateOptions(
+        //     enableQuantization: false,
+        //     allowPrecisionLoss: false,
+        //     waitType: TFLGpuDelegateWaitType.active,
+        //   ),
+        // );
+        // final interpreterOptions = InterpreterOptions()..addDelegate(delegate);
+        // interpreterOptions.threads = 4;
         _interpreter = await Interpreter.fromAsset('model/model_quant.tflite',
-            options: interpreterOptions);
+            options: options);
       }
     }
+  }
+
+  @override
+  Future<void> loadSmallModel() async {
+    ///Load model
+    final options = InterpreterOptions();
+    options.threads = 4;
+
+    _interpreter = await Interpreter.fromAsset('model/model_quant.tflite',
+        options: options);
   }
 
   @override
@@ -113,15 +126,20 @@ class TfAcneScanService implements AcneScanService {
       },
       // onError: port.sendPort,
       onExit: port.sendPort,
+      // onError:
     );
 
-    List<int>? bytes = (await port.first as List?)?.cast<int>();
+    Uint8List? bytes = await port.first as Uint8List?;
 
     if (bytes == null) {
-      return Uint8List.fromList([]);
+      return Uint8List.fromList(<int>[]);
     }
-    Uint8List resultBytes = Uint8List.fromList(bytes);
-    return resultBytes;
+
+    // List<int> bytes = listResult.map((item) => item as int).toList();
+    //
+    // Uint8List resultBytes = Uint8List.fromList(bytes);
+
+    return bytes;
   }
 
   @override
@@ -176,6 +194,8 @@ class TfAcneScanService implements AcneScanService {
 
   @override
   int get outPutSize => _outputSize;
+
+
 }
 
 void _isolateAcneScan(Map<String, dynamic> data) {
@@ -234,7 +254,7 @@ void _isolateAcneScan(Map<String, dynamic> data) {
   final List<int> normalArray =
       flatten.map<int>((index) => (index / unitValue).toInt()).toList();
 
-  sendPort.send(normalArray);
+  sendPort.send(Uint8List.fromList(normalArray));
 }
 
 List<int> _convertOutputToBytesArray(

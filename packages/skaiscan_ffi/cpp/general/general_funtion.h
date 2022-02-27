@@ -13,6 +13,22 @@ void platform_log(const char *fmt, ...);
 #define FUNCTION_ATTRIBUTE __declspec(dllexport)
 #endif
 
+struct MaskColorData {
+    int index;
+
+    int red;
+
+    int green;
+
+    int blue;
+
+    MaskColorData(int index, int red, int green, int blue) {
+        this->index = index;
+        this->red = red;
+        this->green = green;
+        this->blue = blue;
+    };
+};
 
 //curl reponse to dart side
 struct CurlResponse{

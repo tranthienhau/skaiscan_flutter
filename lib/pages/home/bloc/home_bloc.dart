@@ -287,119 +287,131 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
     _scanCompleter = Completer<void>();
 
-    final cameraImage = _cameraImage;
-
-    final data = state.data;
-
-    ///Update progress to 10% for UI
-    emit(HomeScanInProgress(data.copyWith(scanPercent: 10)));
-
-    /// Convert camera image to bytes
-    final bytes = await _nativeOpencv.convertCameraImageToBytes(
-      yBytes: cameraImage.planes[0].bytes,
-      uBytes: Platform.isAndroid ? cameraImage.planes[1].bytes : null,
-      vBytes: Platform.isAndroid ? cameraImage.planes[2].bytes : null,
-      isYUV: Platform.isAndroid,
-      bytesPerRow: Platform.isAndroid ? cameraImage.planes[1].bytesPerRow : 0,
-      bytesPerPixel:
-          Platform.isAndroid ? cameraImage.planes[1].bytesPerPixel ?? 0 : 0,
-      width: cameraImage.width,
-      height: cameraImage.height,
-    );
-
-    final image = imglib.decodeImage(bytes);
-
-    if (image == null) {
-      _scanCompleter?.complete();
-
-      emit(HomeScanFailure(state.data, 'Can not scan acne. Please try again!'));
-      return;
-    }
-
-    ///Update progress to 20% for UI
-    emit(HomeScanInProgress(data.copyWith(scanPercent: 20)));
-
-    const uuid = Uuid();
-
     try {
-      await AwsS3.uploadBytes(
-        bytes: imglib.encodeJpg(image),
-        accessKey: 'AKIASTXIMYTMY4CZ37ZO',
-        bucket: 'skaiscan-collect',
-        fileName: '${uuid.v1()}.jpeg',
-        secretKey: 'hh7l5aV6hyt0L5CmDDbBTXSCe2VlAkjaa6N/OGRC',
-        // acl: ,
-        destDir: '',
-        region: 'eu-central-1',
+      final cameraImage = _cameraImage;
+
+      final data = state.data;
+
+      /// Convert camera image to bytes
+      final bytes = await _nativeOpencv.convertCameraImageToBytes(
+        yBytes: cameraImage.planes[0].bytes,
+        uBytes: Platform.isAndroid ? cameraImage.planes[1].bytes : null,
+        vBytes: Platform.isAndroid ? cameraImage.planes[2].bytes : null,
+        isYUV: Platform.isAndroid,
+        bytesPerRow: Platform.isAndroid ? cameraImage.planes[1].bytesPerRow : 0,
+        bytesPerPixel:
+            Platform.isAndroid ? cameraImage.planes[1].bytesPerPixel ?? 0 : 0,
+        width: cameraImage.width,
+        height: cameraImage.height,
+      );
+
+      ///Update progress to 10% for UI
+      emit(HomeScanInProgress(data.copyWith(scanPercent: 10)));
+
+      final image = imglib.decodeImage(bytes);
+
+      if (image == null) {
+        _scanCompleter?.complete();
+
+        emit(HomeScanFailure(
+            state.data, 'Can not scan acne. Please try again!'));
+        return;
+      }
+
+      ///Update progress to 20% for UI
+      emit(HomeScanInProgress(data.copyWith(scanPercent: 20)));
+
+      ///Update progress to 20% for UI
+      // emit(HomeScanInProgress(data.copyWith(scanPercent: 30)));
+
+      /// Feed camera image to [_acneScanService] to get acne mask
+      await _acneScanService.selectImage(image);
+
+      ///Update progress to 40% for UI
+      emit(HomeScanInProgress(data.copyWith(scanPercent: 40)));
+
+      late Uint8List result;
+      try {
+        /// Get scan acne mask
+        result = await _acneScanService.getAcneBytes();
+      } catch (e) {
+        await _acneScanService.loadSmallModel();
+        result = await _acneScanService.getAcneBytes();
+      }
+
+      ///Update progress to 70% for UI
+      emit(HomeScanInProgress(data.copyWith(scanPercent: 60)));
+
+      /// Apply color for acne mask
+      Uint8List finalResult = await _nativeSkaiscan.applyAcneMaskColorV2(
+        maskBytes: Uint8List.fromList(result),
+        originBytes: bytes,
+        maskHeight: _acneScanService.outPutSize,
+        maskWidth: _acneScanService.outPutSize,
+        originHeight: cameraImage.height,
+        originWidth: cameraImage.width,
+      );
+
+      ///Filter to get only value different 0, 0-> background
+      final acneListFilter = result.toSet().where((element) => element != 0);
+
+      ///Convert filter array to acne list
+      /// 1 -> papules
+      /// 2 -> blackheads
+      /// 3 -> pustules
+      /// 4 -> whiteheads
+      final acneListResult =
+          acneListFilter.map((index) => Acne.values[index - 1]).toList();
+
+      ///Crop image with UI rect
+      final rect = _uiRectangle;
+      if (rect != null) {
+        ///Update progress to 80% for UI
+        emit(HomeScanInProgress(data.copyWith(scanPercent: 80)));
+
+        finalResult = await _nativeOpencv.cropImageBytes(
+          bytes: finalResult,
+          rect: CvRectangle(
+            left: rect.left,
+            top: rect.top,
+            width: rect.width,
+            height: rect.height,
+          ),
+        );
+      }
+
+      const uuid = Uuid();
+
+      try {
+        await AwsS3.uploadBytes(
+          bytes: imglib.encodeJpg(image),
+          accessKey: 'AKIASTXIMYTMY4CZ37ZO',
+          bucket: 'skaiscan-collect',
+          fileName: '${uuid.v1()}.jpeg',
+          secretKey: 'hh7l5aV6hyt0L5CmDDbBTXSCe2VlAkjaa6N/OGRC',
+          // acl: ,
+          destDir: '',
+          region: 'eu-central-1',
+        );
+      } catch (e, stack) {
+        _logService.error('Failed upload image', e.toString(), stack);
+      }
+
+      ///Update progress to 100% for UI and complete scan
+      emit(
+        HomeScanComplete(
+          data: state.data.copyWith(
+            captureBytes: finalResult,
+            scanPercent: 100,
+            allowScan: false,
+          ),
+          acneList: acneListResult,
+        ),
       );
     } catch (e, stack) {
-      _logService.error('Failed upload image', e.toString(), stack);
+      _logService.error('HomeScanFailure', e.toString(), stack);
+      emit(HomeScanFailure(state.data, e.toString()));
     }
-
-    ///Update progress to 20% for UI
-    emit(HomeScanInProgress(data.copyWith(scanPercent: 30)));
-
-    /// Feed camera image to [_acneScanService] to get acne mask
-    await _acneScanService.selectImage(image);
-
-    ///Update progress to 40% for UI
-    emit(HomeScanInProgress(data.copyWith(scanPercent: 40)));
-
-    /// Get scan acne mask
-    final result = await _acneScanService.getAcneBytes();
-
-    ///Update progress to 70% for UI
-    emit(HomeScanInProgress(data.copyWith(scanPercent: 60)));
-
-    /// Apply color for acne mask
-    Uint8List finalResult = await _nativeSkaiscan.applyAcneMaskColorV2(
-      maskBytes: Uint8List.fromList(result),
-      originBytes: bytes,
-      maskHeight: _acneScanService.outPutSize,
-      maskWidth: _acneScanService.outPutSize,
-      originHeight: cameraImage.height,
-      originWidth: cameraImage.width,
-    );
-
-    ///Filter to get only value different 0, 0-> background
-    final acneListFilter = result.toSet().where((element) => element != 0);
-
-    ///Convert filter array to acne list
-    /// 1 -> papules
-    /// 2 -> blackheads
-    /// 3 -> pustules
-    /// 4 -> whiteheads
-    final acneListResult =
-        acneListFilter.map((index) => Acne.values[index - 1]).toList();
-
-    ///Crop image with UI rect
-    final rect = _uiRectangle;
-    if (rect != null) {
-      ///Update progress to 80% for UI
-      emit(HomeScanInProgress(data.copyWith(scanPercent: 80)));
-
-      finalResult = await _nativeOpencv.cropImageBytes(
-        bytes: finalResult,
-        rect: CvRectangle(
-          left: rect.left,
-          top: rect.top,
-          width: rect.width,
-          height: rect.height,
-        ),
-      );
-    }
-
-    ///Update progress to 100% for UI and complete scan
-    emit(
-      HomeScanComplete(
-        data: state.data.copyWith(
-          captureBytes: finalResult,
-          scanPercent: 100,
-          allowScan: false,
-        ),
-        acneList: acneListResult,
-      ),
-    );
 
     _scanCompleter?.complete();
   }

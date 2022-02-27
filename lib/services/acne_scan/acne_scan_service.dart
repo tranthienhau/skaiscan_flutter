@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-
 import 'package:image/image.dart' as imglib;
 
 abstract class AcneScanService {
   Future<void> init();
+
+  Future<void> loadSmallModel();
 
   int get outPutSize;
 

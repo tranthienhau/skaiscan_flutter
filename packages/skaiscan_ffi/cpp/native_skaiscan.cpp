@@ -8,22 +8,6 @@
 using namespace cv;
 using namespace std;
 
-struct MaskColorData {
-    int index;
-
-    int red;
-
-    int green;
-
-    int blue;
-
-    MaskColorData(int index, int red, int green, int blue) {
-        this->index = index;
-        this->red = red;
-        this->green = green;
-        this->blue = blue;
-    };
-};
 
 Mat &convert_black_to_transperant(Mat &mask, Mat &result_mask) {
 
@@ -55,8 +39,7 @@ Mat &convert_black_to_transperant(Mat &mask, Mat &result_mask) {
 extern "C" {
 
 FUNCTION_ATTRIBUTE
-unsigned char *
-convert_mask_to_color(uint8_t *mask_bytes, int32_t *imgLengthBytes, int width, int height) {
+unsigned char *convert_mask_to_color(uint8_t *mask_bytes, int32_t *imgLengthBytes, int width, int height) {
     cv::Mat acne_mask(height, width, CV_8UC1, mask_bytes);
     cvtColor(acne_mask, acne_mask, COLOR_GRAY2BGR);
 
@@ -72,8 +55,7 @@ convert_mask_to_color(uint8_t *mask_bytes, int32_t *imgLengthBytes, int width, i
 
 
 FUNCTION_ATTRIBUTE
-unsigned char *
-apply_acne_mask_color_v2(uint8_t *mask_bytes, uint8_t *origin_bytes, int32_t *imgLengthBytes,
+unsigned char *apply_acne_mask_color_v2(uint8_t *mask_bytes, uint8_t *origin_bytes, int32_t *imgLengthBytes,
                          int mask_width, int mask_height,
                          int origin_width, int origin_height) {
 
@@ -168,8 +150,7 @@ apply_acne_mask_color_v2(uint8_t *mask_bytes, uint8_t *origin_bytes, int32_t *im
 }
 
 FUNCTION_ATTRIBUTE
-unsigned char *
-apply_acne_mask_color(uint8_t *mask_bytes, void *origin_ptr, int32_t *imgLengthBytes, int width,
+unsigned char *apply_acne_mask_color(uint8_t *mask_bytes, void *origin_ptr, int32_t *imgLengthBytes, int width,
                       int height) {
     cv::Mat *origin_mat = (Mat *) origin_ptr;
 

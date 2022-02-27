@@ -42,6 +42,7 @@ class _HomePageState extends State<HomePage> {
       listener: (context, state) {
         if (state is HomeScanFailure) {
           App.pop();
+          DialogHelper.showError(content: state.error);
           return;
         }
 

@@ -8,17 +8,6 @@ import 'package:timeago/timeago.dart';
 
 enum FormatType { date, time, dateTime, dateMonth, monthYear, code }
 
-
-
-
-// extension ListExtension<T> on List<Map<String, dynamic>>{
-//    List<T> get toObject(){
-//
-//     return
-//   }
-//
-// }
-
 class TimeUtils {
   static final formatSimpleDate = DateFormat('MM/dd/yyyy');
   static final formatSimpleDateTime = DateFormat('HH:mm MM/dd/yyyy');
@@ -118,10 +107,15 @@ class ViewUtils {
 }
 
 class NumberUtils {
-  static String formatToPattern(double pureNumber, {String? pattern = '#,###.#'}){
+  static String formatToPattern(double pureNumber,
+      {String? pattern = '#,###.#'}) {
     //todo: need put locale here
     final f = NumberFormat("#,###.#", "en_US");
-    return f.format(pureNumber).replaceAll(',', '@').replaceAll(',', '.').replaceAll('@', ',');
+    return f
+        .format(pureNumber)
+        .replaceAll(',', '@')
+        .replaceAll(',', '.')
+        .replaceAll('@', ',');
   }
 }
 
