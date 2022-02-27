@@ -1,13 +1,5 @@
-
-import 'dart:async';
-
-import 'package:flutter/services.dart';
-
-class SkaiscanFfi {
-  static const MethodChannel _channel = MethodChannel('skaiscan_ffi');
-
-  static Future<String?> get platformVersion async {
-    final String? version = await _channel.invokeMethod('getPlatformVersion');
-    return version;
-  }
-}
+export 'src/model/cv_rectangle.dart';
+export 'src/model/mask_color.dart';
+export 'src/model/native_image.dart';
+export 'src/native_opencv.dart';
+export 'src/native_skaiscan.dart';

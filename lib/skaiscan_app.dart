@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:skaiscan/all_file/all_file.dart';
 import 'package:skaiscan/core/app_config.dart';
 import 'package:skaiscan/core/routes/routes_mapper.dart';
@@ -19,21 +20,31 @@ class _MyApp extends StatefulWidget {
 class _MyAppState extends State<_MyApp> {
   final _applicationBloc = ApplicationBloc();
 
+
+  @override
+  void initState() {
+    SystemChrome.setPreferredOrientations([
+      // DeviceOrientation.landscapeRight,
+      // DeviceOrientation.landscapeLeft,
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
         BlocProvider<ApplicationBloc>.value(
           value: _applicationBloc
-            ..add(
-              ApplicationLoaded(),
-            ),
+
         ),
       ],
       child: OverlaySupport.global(
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
-          title: 'Scan App',
+          title: 'Skaiscan',
           theme: ThemeProvider.getTheme(isDarkMode: false),
           darkTheme: ThemeData.light(),
           themeMode: AppOptions.of(context)!.themeMode,
@@ -56,8 +67,8 @@ class _MyAppState extends State<_MyApp> {
   }
 }
 
-class AcneScanApp extends StatelessWidget {
-  const AcneScanApp({Key? key}) : super(key: key);
+class SkaiscanApp extends StatelessWidget {
+  const SkaiscanApp({Key? key}) : super(key: key);
 
   // This widget is the root of your application.
   @override

@@ -16,32 +16,13 @@
 
 #ifdef __ANDROID__
 
-#include <android/log.h>
 #include <opencv2/imgproc/types_c.h>
 
 #endif
 
-#ifdef IS_WIN32
-#include <windows.h>
-#endif
-
-#if defined(__GNUC__)
-// Attributes to prevent 'unused' function from being removed and to make it visible
-#define FUNCTION_ATTRIBUTE __attribute__((visibility("default"))) __attribute__((used))
-#elif defined(_MSC_VER)
-// Marking a function for export
-#define FUNCTION_ATTRIBUTE __declspec(dllexport)
-#endif
 
 using namespace cv;
 using namespace std;
-
-struct DuoToneParam {
-    float exponent;
-    int s1; // value from 0-2 (0 : BLUE n1 : GREEN n2 : RED)
-    int s2; // value from 0-3 (0 : BLUE n1 : GREEN n2 : RED n3 : NONE)
-    int s3; // (0 : DARK n1 : LIGHT)
-};
 
 
 long long int get_now() {
@@ -50,28 +31,133 @@ long long int get_now() {
     ).count();
 }
 
+struct NativeColor {
+    int red;
+
+    int green;
+
+    int blue;
+};
+
+struct NativeRectangle {
+    int x;
+
+    int y;
+
+    int width;
+
+    int height;
+};
+
+//struct MaskColorData {
+//   int index;
+//
+//   int red;
+//
+//   int green;
+//
+//   int blue;
+//
+//  MaskColorData(int index,int red, int green, int blue){
+//      this->index = index;
+//      this->red = red;
+//      this->green = green;
+//      this->blue = blue;
+//  };
+//};
+int clamp(int lower, int higher, int val) {
+    if (val < lower)
+        return 0;
+    else if (val > higher)
+        return 255;
+    else
+        return val;
+}
+
+int getRotatedImageByteIndex(int x, int y, int rotatedImageWidth) {
+    return rotatedImageWidth * (y + 1) - (x + 1);
+}
+
+
+
+void rotateMat(Mat &matImage, int rotation) {
+    if (rotation == 90) {
+        transpose(matImage, matImage);
+        flip(matImage, matImage, 1); //transpose+flip(1)=CW
+    } else if (rotation == 270) {
+        transpose(matImage, matImage);
+        flip(matImage, matImage, 0); //transpose+flip(0)=CCW
+    } else if (rotation == 180) {
+        flip(matImage, matImage, -1);    //flip(-1)=180
+    }
+}
+
+uint32_t *
+convert_yuv_to_rbga_bytes(uint8_t *plane0, uint8_t *plane1, uint8_t *plane2, int bytesPerRow,
+                          int bytesPerPixel, int width, int height) {
+    int hexFF = 255;
+    int x, y, uvIndex, index;
+    int yp, up, vp;
+    int r, g, b;
+    int rt, gt, bt;
+
+    uint32_t *image = (uint32_t *) malloc(sizeof(uint32_t) * (width * height));
+
+    for (x = 0; x < width; x++) {
+        for (y = 0; y < height; y++) {
+
+            uvIndex = bytesPerPixel * ((int) floor(x / 2)) + bytesPerRow * ((int) floor(y / 2));
+            index = y * width + x;
+
+            yp = plane0[index];
+            up = plane1[uvIndex];
+            vp = plane2[uvIndex];
+            rt = round(yp + vp * 1436 / 1024 - 179);
+            gt = round(yp - up * 46549 / 131072 + 44 - vp * 93604 / 131072 + 91);
+            bt = round(yp + up * 1814 / 1024 - 227);
+            r = clamp(0, 255, rt);
+            g = clamp(0, 255, gt);
+            b = clamp(0, 255, bt);
+            image[getRotatedImageByteIndex(y, x, height)] =
+                    (hexFF << 24) | (b << 16) | (g << 8) | r;
+//                image[getRotatedImageByteIndex(y, x, height)] = (hexFF << 24) | (r << 16) | (g << 8) | b;
+        }
+    }
+
+    return image;
+}
+
+
+
 // Avoiding name mangling
 extern "C" {
-
-Mat exponential_function(Mat channel, float exp) {
-    Mat table(1, 256, CV_8U);
-
-    for (int i = 0; i < 256; i++)
-        table.at<uchar>(i) = min((int) pow(i, exp), 255);
-
-    LUT(channel, table, channel);
-    return channel;
-}
 
 FUNCTION_ATTRIBUTE
 const char *version() {
     return CV_VERSION;
 }
 
+FUNCTION_ATTRIBUTE
+void *create_mat_pointer() {
+    cv::Mat *src = new Mat();
+
+    return src;
+}
+
+FUNCTION_ATTRIBUTE
+void free_mat_ptr(void *src_ptr) {
+    cv::Mat *src = (Mat *) src_ptr;
+    if (src == nullptr || src->data == nullptr) {
+        return;
+    }
+
+    src->release();
+    delete src;
+}
 
 FUNCTION_ATTRIBUTE
 void *create_mat_pointer_from_bytes(unsigned char *bytes,
-                                   int32_t *imgLengthBytes) {
+                                    int32_t *imgLengthBytes) {
     cv::Mat *src = new Mat();
     int32_t a = *imgLengthBytes;
     std::vector<unsigned char> m;
@@ -80,9 +166,11 @@ void *create_mat_pointer_from_bytes(unsigned char *bytes,
         m.push_back(*(bytes++));
         a--;
     }
+
     *src = cv::imdecode(m, cv::IMREAD_UNCHANGED);
     if (src->data == nullptr)
         return nullptr;
+
     platform_log("create_mat_pointer_from_bytes: len before:%d  len after:%d  width:%d  height:%d",
                  *imgLengthBytes, src->step[0] * src->rows,
                  src->cols, src->rows);
@@ -92,371 +180,269 @@ void *create_mat_pointer_from_bytes(unsigned char *bytes,
     return src;
 }
 
+
 FUNCTION_ATTRIBUTE
-unsigned char * process_mat_to_bytes_greyscale(void *imgMat, int32_t *imgLengthBytes) {
-    cv::Mat *src = (Mat *) imgMat;
-    if (src == nullptr || src->data == nullptr)
+unsigned char *convert_mat_to_bytes(void *src_ptr, int32_t *imgLengthBytes) {
+    cv::Mat *src = (Mat *) src_ptr;
+    *imgLengthBytes = 0;
+    if (src == nullptr || src->data == nullptr) {
         return nullptr;
-    Mat dst =  cv::Mat();
-
-    std::vector<uchar> buf(1);
-    cv::imencode(".bmp", dst, buf);
-    *imgLengthBytes = buf.size();
-
-    unsigned char *ret = (unsigned char *)malloc(buf.size());
-    memcpy(ret, buf.data(), buf.size());
-    return ret;
-}
-
-
-FUNCTION_ATTRIBUTE
-unsigned char * process_mat_to_duo_tone_bytes(void *imgMat,  DuoToneParam param) {
-    Mat duo_tone = ((Mat *) imgMat)->clone();
-    float exp = 1.0f + param.exponent / 100.0f;
-    int s1 = param.s1;
-    int s2 = param.s2;
-    int s3 = param.s3;
-
-    platform_log("apply_mat_duo_tone_filter:  param: %d,s1: %d,s2: %d,s3: %d", param.exponent, s1,
-                 s2, s3);
-
-    Mat channels[3];
-    split(duo_tone, channels);
-
-    for (int i = 0; i < 3; i++) {
-        if ((i == s1) || (i == s2)) {
-            channels[i] = exponential_function(channels[i], exp);
-        } else {
-            if (s3) {
-                channels[i] = exponential_function(channels[i], 2 - exp);
-            } else {
-                channels[i] = Mat::zeros(channels[i].size(), CV_8UC1);
-            }
-        }
     }
 
-    vector<Mat> newChannels{channels[0], channels[1], channels[2]};
-
-    merge(newChannels, duo_tone);
-
-
     std::vector<uchar> buf(1);
-    cv::imencode(".bmp", duo_tone, buf);
-//    *imgLengthBytes = buf.size();
+    cv::imencode(".bmp", *src, buf);
+    *imgLengthBytes = buf.size();
 
-    unsigned char *ret = (unsigned char *)malloc(buf.size());
+    unsigned char *ret = (unsigned char *) malloc(buf.size());
     memcpy(ret, buf.data(), buf.size());
     return ret;
 }
 
-
 FUNCTION_ATTRIBUTE
-Mat *create_mat_pointer(char *inputImagePath) {
+void *create_mat_pointer_from_path(char *inputImagePath) {
 
     Mat image = imread(inputImagePath, IMREAD_COLOR);
+
     Mat *matPointer = new Mat(image);
 
     return matPointer;
 }
 
+
+//    Mat* global_bgra_mat_ptr = nullptr;
 FUNCTION_ATTRIBUTE
-void apply_mat_gray_filter(Mat *mat, char *outputImagePath) {
-    Mat greyMat;
-    platform_log("apply_mat_gray_filter:  outputImagePath: %s", outputImagePath);
-    std::vector<uchar> array;
+Mat *create_mat_from_bgra_bytes(unsigned char *bytes, int width, int height) {
+    cv::Mat src(height, width, CV_8UC4, bytes);
 
-    cv::cvtColor(*mat, greyMat, CV_BGR2GRAY);
+    Mat *mat_ptr = new Mat();
+    *mat_ptr = src.clone();
 
-    imwrite(outputImagePath, greyMat);
+    src.release();
 
+    return mat_ptr;
+}
+
+FUNCTION_ATTRIBUTE
+Mat *convert_camera_image_to_mat(unsigned char *bytes, bool is_yuv, int rotation, int width,
+                                 int height) {
+
+    Mat frame;
+    if (is_yuv) {
+        Mat myyuv(height + height / 2, width, CV_8UC1, bytes);
+        cvtColor(myyuv, frame, COLOR_YUV2RGBA_NV21);
+    } else {
+        frame = Mat(height, width, CV_8UC4, bytes);
+    }
+
+    rotateMat(frame, rotation);
+    Mat *mat_ptr = new Mat();
+    *mat_ptr = frame.clone();
+
+    frame.release();
+
+    return mat_ptr;
+}
+
+
+//FUNCTION_ATTRIBUTE
+
+//Mat *global_mat_ptr = nullptr;
+
+//FUNCTION_ATTRIBUTE
+//Mat *convert_camera_image_to_mat_v2(uint8_t *plane0, uint8_t *plane1, uint8_t *plane2, bool is_yuv,
+//                                    int bytesPerRow, int bytesPerPixel, int width, int height) {
+//
+//    Mat frame;
+//
+//    uint32_t *rgba_bytes = nullptr;
+//
+//    if (is_yuv) {
+//        rgba_bytes = convert_yuv_to_rbga_bytes(plane0, plane1, plane2, bytesPerRow, bytesPerPixel,
+//                                               width, height);
+//        cv::Mat rgba_mat((width), (height), CV_8UC4, rgba_bytes);
+//        cvtColor(rgba_mat, frame, COLOR_RGBA2BGRA);
+//        flip(frame, frame, 0);
+//
+//    } else {
+//        frame = Mat(height, width, CV_8UC4, plane0);
+//    }
+//
+//    Mat *mat_ptr = new Mat();
+//
+//    *mat_ptr = frame.clone();
+//
+//    if (is_yuv) {
+//        delete[] rgba_bytes;
+//    }
+//
+//    frame.release();
+//
+//    return mat_ptr;
+//}
+
+FUNCTION_ATTRIBUTE
+unsigned char *convert_camera_image_to_mat_v3(uint8_t *plane0, uint8_t *plane1, uint8_t *plane2,
+                                              int32_t *imgLengthBytes, bool is_yuv, int bytesPerRow,
+                                              int bytesPerPixel, int width, int height) {
+
+    Mat frame;
+
+    uint32_t *rgba_bytes = nullptr;
+
+    if (is_yuv) {
+        rgba_bytes = convert_yuv_to_rbga_bytes(plane0, plane1, plane2, bytesPerRow, bytesPerPixel,
+                                               width, height);
+        cv::Mat rgba_mat((width), (height), CV_8UC4, rgba_bytes);
+        cvtColor(rgba_mat, frame, COLOR_RGBA2BGRA);
+        flip(frame, frame, 0);
+    } else {
+        frame = Mat(height, width, CV_8UC4, plane0);
+    }
+
+    std::vector<uchar> buf(1);
+    cv::imencode(".bmp", frame, buf);
+    *imgLengthBytes = buf.size();
+
+    unsigned char *ret = (unsigned char *) malloc(buf.size());
+    memcpy(ret, buf.data(), buf.size());
+
+    if (rgba_bytes != nullptr) {
+        delete[] rgba_bytes;
+    }
+
+    frame.release();
+
+    return ret;
 }
 
 
 FUNCTION_ATTRIBUTE
-void apply_mat_duo_tone_filter(Mat *mat, char *outputImagePath, DuoToneParam param) {
+void *create_mat_from_yuv(uint8_t *plane0, uint8_t *plane1, uint8_t *plane2, int bytesPerRow,
+                          int bytesPerPixel, int width, int height) {
+    int hexFF = 255;
+    int x, y, uvIndex, index;
+    int yp, up, vp;
+    int r, g, b;
+    int rt, gt, bt;
 
+    uint32_t *image = (uint32_t *) malloc(sizeof(uint32_t) * (width * height));
 
-    Mat duo_tone = mat->clone();
-    float exp = 1.0f + param.exponent / 100.0f;
-    int s1 = param.s1;
-    int s2 = param.s2;
-    int s3 = param.s3;
+    for (x = 0; x < width; x++) {
+        for (y = 0; y < height; y++) {
 
-    platform_log("apply_mat_duo_tone_filter:  param: %d,s1: %d,s2: %d,s3: %d", param.exponent, s1,
-                 s2, s3);
+            uvIndex = bytesPerPixel * ((int) floor(x / 2)) + bytesPerRow * ((int) floor(y / 2));
+            index = y * width + x;
 
-    Mat channels[3];
-    split(duo_tone, channels);
-
-    for (int i = 0; i < 3; i++) {
-        if ((i == s1) || (i == s2)) {
-            channels[i] = exponential_function(channels[i], exp);
-        } else {
-            if (s3) {
-                channels[i] = exponential_function(channels[i], 2 - exp);
-            } else {
-                channels[i] = Mat::zeros(channels[i].size(), CV_8UC1);
-            }
+            yp = plane0[index];
+            up = plane1[uvIndex];
+            vp = plane2[uvIndex];
+            rt = round(yp + vp * 1436 / 1024 - 179);
+            gt = round(yp - up * 46549 / 131072 + 44 - vp * 93604 / 131072 + 91);
+            bt = round(yp + up * 1814 / 1024 - 227);
+            r = clamp(0, 255, rt);
+            g = clamp(0, 255, gt);
+            b = clamp(0, 255, bt);
+//                image[getRotatedImageByteIndex(y, x, height)] = (hexFF << 24) | (b << 16) | (g << 8) | r;
+            image[getRotatedImageByteIndex(y, x, height)] =
+                    (hexFF << 24) | (r << 16) | (g << 8) | b;
         }
     }
 
-    vector<Mat> newChannels{channels[0], channels[1], channels[2]};
-
-    merge(newChannels, duo_tone);
+    cv::Mat src((width), (height), CV_8UC4, image);
 
 
-    imwrite(outputImagePath, duo_tone);
+    platform_log("create_mat_from_yuv: len:%d  width:%d  height:%d", src.step[0] * src.rows,
+                 src.cols, src.rows);
 
+    Mat *mat_ptr = new Mat();
+    *mat_ptr = src.clone();
+
+    src.release();
+    delete[] image;
+
+    return mat_ptr;
 }
 
 FUNCTION_ATTRIBUTE
-void apply_mat_invert_filter(Mat *mat, char *outputImagePath) {
-    Mat output;
-    bitwise_not(*mat, output);
-    imwrite(outputImagePath, output);
+void *draw_rectangle(void *src_ptr, int32_t x, int32_t y, int32_t width, int32_t height) {
+    cv::Mat *src = (Mat *) src_ptr;
+    if (src == nullptr || src->data == nullptr)
+        return nullptr;
+
+    Rect rect(x, y, width, height);
+
+    cv::rectangle(*src, rect, cv::Scalar(0, 255, 0));
+
+    return src;
 }
 
-FUNCTION_ATTRIBUTE
-void apply_mat_pencil_sketch_filter(Mat *mat, char *outputImagePath) {
-    Mat kernel = (cv::Mat_<float>(3, 3)
-            <<
-            -1, -1, -1,
-            -1, 9.5, -1,
-            -1, -1, -1);
-    Mat colorOutput;
-    Mat grayOutput;
-    pencilSketch(*mat, grayOutput, colorOutput, 60, 0.07, 0.1);
-    imwrite(outputImagePath, colorOutput);
-}
 
 FUNCTION_ATTRIBUTE
-void apply_mat_sharpen_filter(Mat *mat, char *outputImagePath) {
-    Mat kernel = (cv::Mat_<float>(3, 3)
-            <<
-            -1, -1, -1,
-            -1, 9.5, -1,
-            -1, -1, -1);
-    Mat output;
-    filter2D(*mat, output, -1, kernel);
-    imwrite(outputImagePath, output);
+void *crop_mat(void *src_ptr, int32_t x, int32_t y, int32_t width, int32_t height) {
+    cv::Mat *src = (Mat *) src_ptr;
+
+    cv::Mat *cropped_image = new Mat();
+
+    *cropped_image = (*src)(Range(y, y + height), Range(x, x + width));
+
+    return cropped_image;
 }
 
-FUNCTION_ATTRIBUTE
-void apply_mat_hdr_filter(Mat *mat, char *outputImagePath) {
-    Mat output;
-    detailEnhance(*mat, output, 12, 0.15);
-    imwrite(outputImagePath, output);
-}
 
 FUNCTION_ATTRIBUTE
-void apply_mat_summer_filter(Mat *mat, char *outputImagePath) {
-//    Mat greyMat;
-    platform_log("apply_mat_summer_filter:  outputImagePath: %s", outputImagePath);
-//    std::vector<uchar> array;
+void *crop_image_bytes(unsigned char *bytes, int32_t *imgLengthBytes, int32_t x, int32_t y, int32_t width,
+                 int32_t height) {
+    cv::Mat src;
+    int32_t a = *imgLengthBytes;
+    std::vector<unsigned char> m;
+
+    while (a >= 0) {
+        m.push_back(*(bytes++));
+        a--;
+    }
+
+    src = cv::imdecode(m, cv::IMREAD_UNCHANGED);
+
+    cv::Mat cropped_image;
+
+    cropped_image = src(Range(y, y + height), Range(x, x + width));
+
+    std::vector<uchar> buf(1);
+    cv::imencode(".bmp", cropped_image, buf);
+    *imgLengthBytes = buf.size();
+
+    unsigned char *ret = (unsigned char *) malloc(buf.size());
+    memcpy(ret, buf.data(), buf.size());
+
+    return ret;
+}
+
+
 //
-//    cv::cvtColor(*mat, greyMat, CV_BGR2GRAY);
+//void convert_black_to_transperant(Mat &mask) {
+//
+//    Mat gray, thresh_hold;
+//
+//    cvtColor(mask, gray, COLOR_BGR2GRAY);
+//
+//    threshold(gray, thresh_hold, 0, 255, THRESH_BINARY);
+//
+//    Mat bgra[4];
+//    split(mask, bgra);
+//
+//    vector<Mat> mask_channels;
+//
+//    mask_channels.push_back(bgra[0]);
+//    mask_channels.push_back(bgra[1]);
+//    mask_channels.push_back(bgra[2]);
+//    mask_channels.push_back(thresh_hold);
+//
+//    merge(mask_channels, mask);
+//
+//    gray.release();
+//
+//    thresh_hold.release();
+//}
+//
 
-    float data[8] = {0, 64, 128, 256, 0, 80, 160, 256};
-    cv::Mat your_matrix = cv::Mat(3, 2, CV_8U, data);
-
-    Mat increase_lookup = (cv::Mat_<float>(3, 2)
-            <<
-            0, 64, 128, 256,
-            0, 80, 160, 256);
-
-    Mat decrease_lookup = (cv::Mat_<float>(3, 2)
-            <<
-            0, 64, 128, 256,
-            0, 50, 100, 256);
-    Mat channel_mat[3];
-    split(*mat, channel_mat);
-
-    Mat blue_channel = channel_mat[0];
-    Mat green_channel = channel_mat[1];
-    Mat red_channel = channel_mat[2];
-
-
-    Mat red_lut;
-    Mat blue_lut;
-    cv::LUT(red_channel, increase_lookup, red_lut);
-    cv::LUT(blue_channel, decrease_lookup, blue_lut);
-    vector<Mat> channels;
-    channels.push_back(blue_channel);
-    channels.push_back(green_channel);
-    channels.push_back(red_lut);
-
-    Mat output;
-    cv::merge(channels, output);
-    imwrite(outputImagePath, output);
-
-}
-
-
-FUNCTION_ATTRIBUTE
-void apply_mat_cartoon_filter(Mat *mat, char *outputImagePath) {
-    //Convert to gray scale
-    Mat grayImage;
-    cvtColor(*mat, grayImage, COLOR_BGR2GRAY);
-
-    //apply gaussian blur
-    GaussianBlur(grayImage, grayImage, Size(3, 3), 0);
-
-    //find edges
-    Mat edgeImage;
-    Laplacian(grayImage, edgeImage, -1, 5);
-    convertScaleAbs(edgeImage, edgeImage);
-
-    //invert the image
-    edgeImage = 255 - edgeImage;
-
-    //apply thresholding
-    threshold(edgeImage, edgeImage, 150, 255, THRESH_BINARY);
-
-    //blur images heavily using edgePreservingFilter
-    Mat edgePreservingImage;
-    edgePreservingFilter(*mat, edgePreservingImage, 2, 50, 0.4);
-
-    // Create a output Matrix
-    Mat output;
-    output = Scalar::all(0);
-
-    // Combine the cartoon and edges
-    cv::bitwise_and(edgePreservingImage, edgePreservingImage, output, edgeImage);
-
-    imwrite(outputImagePath, output);
-}
-
-FUNCTION_ATTRIBUTE
-void apply_mat_sepia_filter(Mat *mat, char *outputImagePath) {
-
-    Mat kernel = (cv::Mat_<float>(3, 3)
-            <<
-            0.272, 0.534, 0.131,
-            0.349, 0.686, 0.168,
-            0.393, 0.769, 0.189);
-
-    // Create a output Matrix
-    Mat output;
-    cv::transform(*mat, output, kernel);
-
-    imwrite(outputImagePath, output);
-}
-
-FUNCTION_ATTRIBUTE
-void apply_mat_edge_preserving_filter(Mat *mat, char *outputImagePath) {
-    // Create a output Matrix
-    Mat output;
-
-    cv::edgePreservingFilter(*mat, output, 1, 60, 0.4);
-    imwrite(outputImagePath, output);
-}
-
-FUNCTION_ATTRIBUTE
-void apply_mat_stylization_filter(Mat *mat, char *outputImagePath) {
-
-    // Create a output Matrix
-    Mat output;
-
-    cv::stylization(*mat, output, 60, 0.07);
-
-    imwrite(outputImagePath, output);
-}
-
-FUNCTION_ATTRIBUTE
-void apply_gray_filter(char *inputImagePath, char *outputImagePath) {
-    Mat image = imread(inputImagePath, IMREAD_GRAYSCALE);
-    if (image.empty()) {
-        return;
-    }
-    imwrite(outputImagePath, image);
-}
-
-
-FUNCTION_ATTRIBUTE
-void apply_cartoon_filter(char *inputImagePath, char *outputImagePath) {
-    //Read input image
-    Mat image = imread(inputImagePath, IMREAD_COLOR);
-    if (image.empty()) {
-        return;
-    }
-    //Convert to gray scale
-    Mat grayImage;
-    cvtColor(image, grayImage, COLOR_BGR2GRAY);
-
-    //apply gaussian blur
-    GaussianBlur(grayImage, grayImage, Size(3, 3), 0);
-
-    //find edges
-    Mat edgeImage;
-    Laplacian(grayImage, edgeImage, -1, 5);
-    convertScaleAbs(edgeImage, edgeImage);
-
-    //invert the image
-    edgeImage = 255 - edgeImage;
-
-    //apply thresholding
-    threshold(edgeImage, edgeImage, 150, 255, THRESH_BINARY);
-
-    //blur images heavily using edgePreservingFilter
-    Mat edgePreservingImage;
-    edgePreservingFilter(image, edgePreservingImage, 2, 50, 0.4);
-
-    // Create a output Matrix
-    Mat output;
-    output = Scalar::all(0);
-
-    // Combine the cartoon and edges
-    cv::bitwise_and(edgePreservingImage, edgePreservingImage, output, edgeImage);
-
-    imwrite(outputImagePath, output);
-}
-
-FUNCTION_ATTRIBUTE
-void apply_sepia_filter(char *inputImagePath, char *outputImagePath) {
-    //Read input image
-    Mat image = imread(inputImagePath, IMREAD_COLOR);
-    if (image.empty()) {
-        return;
-    }
-    Mat kernel = (cv::Mat_<float>(3, 3)
-            <<
-            0.272, 0.534, 0.131,
-            0.349, 0.686, 0.168,
-            0.393, 0.769, 0.189);
-
-    // Create a output Matrix
-    Mat output;
-    cv::transform(image, output, kernel);
-
-    imwrite(outputImagePath, output);
-}
-
-FUNCTION_ATTRIBUTE
-void apply_edge_preserving_filter(char *inputImagePath, char *outputImagePath) {
-    //Read input image
-    Mat image = imread(inputImagePath, IMREAD_COLOR);
-    if (image.empty()) {
-        return;
-    }
-    // Create a output Matrix
-    Mat output;
-
-    cv::edgePreservingFilter(image, output, 1, 60, 0.4);
-    imwrite(outputImagePath, output);
-}
-
-FUNCTION_ATTRIBUTE
-void apply_stylization_filter(char *inputImagePath, char *outputImagePath) {
-    //Read input image
-    Mat image = imread(inputImagePath, IMREAD_COLOR);
-    if (image.empty()) {
-        return;
-    }
-    // Create a output Matrix
-    Mat output;
-
-    cv::stylization(image, output, 60, 0.07);
-
-    imwrite(outputImagePath, output);
-}
 }

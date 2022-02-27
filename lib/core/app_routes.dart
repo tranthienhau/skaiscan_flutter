@@ -6,15 +6,10 @@ class AppRoutes {
   /// Route of the homepage
   static const home = '/home';
 
-  /// Routes of the login page
-  static const login = '/authentication/login';
+  static const onBoarding = '/onBoarding';
 
-  static const details = '/details';
+  static const introduce = '/introduce';
 
-  static const previewPhoto = '/previewPhoto';
-
-  static const editComment = '/editComment';
-
-  /// Declare other in here...
+  static const scannedAcneResult = '/scannedAcneResult';
 
 }

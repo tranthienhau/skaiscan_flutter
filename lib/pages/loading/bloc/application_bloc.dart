@@ -8,12 +8,14 @@ part 'application_event.dart';
 part 'application_state.dart';
 
 class ApplicationBloc extends Bloc<ApplicationEvent, ApplicationState> {
-  ApplicationBloc() : super(ApplicationInitial()) {
+  ApplicationBloc() : super(ApplicationLoading()) {
     on<ApplicationLoaded>(_onLoaded);
   }
 
   Future<void> _onLoaded(
     ApplicationEvent event,
     Emitter<ApplicationState> emit,
-  ) async {}
+  ) async {
+    emit(ApplicationLoadSuccess());
+  }
 }
