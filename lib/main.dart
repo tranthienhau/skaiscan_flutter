@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:skaiscan/skaiscan_app.dart';
 import 'package:skaiscan/core/locator.dart';
 import 'package:flutter/material.dart';
@@ -11,15 +12,16 @@ final Logger _logger = Logger();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // await Firebase.initializeApp();
+
   await Hive.initFlutter();
   setupLocator();
+  // await Firebase.initializeApp();
 
   BlocOverrides.runZoned(
     () {
       runZonedGuarded(
         () async {
-          runApp(const AcneScanApp());
+          runApp(const SkaiscanApp());
         },
         onError,
       );
