@@ -40,7 +40,8 @@ class TfAcneScanService implements AcneScanService {
         // interpreterOptions.useNnApiForAndroid = true;
         // _interpreter = await Interpreter.fromAsset('model/model_fpn512.tflite',
         //     options: interpreterOptions);
-
+        // _interpreter = await Interpreter.fromAsset('model/model_quant.tflite',
+        //     options: options);
         _interpreter = await Interpreter.fromAsset('model/model_fpn512.tflite',
             options: options);
       } catch (e) {

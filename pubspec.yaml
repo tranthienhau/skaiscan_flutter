@@ -80,8 +80,8 @@ dependencies:
     path: ./packages/skaiscan_localizations
   skaiscan_log_service:
     path: ./packages/skaiscan_log_service
-  skaiscan_api_client:
-    path: ./packages/skaiscan_api_client
+#  skaiscan_api_client:
+#    path: ./packages/skaiscan_api_client
 #  google_vision_api:
 #    path: ./packages/google_vision_api
   skaiscan_ffi:

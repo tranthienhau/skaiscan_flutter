@@ -2,7 +2,7 @@
 #include <android/log.h>
 #endif
 #include <stdarg.h>
-using namespace std;
+//using namespace std;
 //Log to view in console
 void platform_log(const char *fmt, ...) {
     va_list args;

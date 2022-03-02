@@ -336,15 +336,15 @@ void *create_mat_from_yuv(uint8_t *plane0, uint8_t *plane1, uint8_t *plane2, int
             yp = plane0[index];
             up = plane1[uvIndex];
             vp = plane2[uvIndex];
-            rt = round(yp + vp * 1436 / 1024 - 179);
-            gt = round(yp - up * 46549 / 131072 + 44 - vp * 93604 / 131072 + 91);
-            bt = round(yp + up * 1814 / 1024 - 227);
+            rt = static_cast<int>(round(yp + vp * 1436 / 1024 - 179));
+            gt = static_cast<int>(round(yp - up * 46549 / 131072 + 44 - vp * 93604 / 131072 + 91));
+            bt = static_cast<int>(round(yp + up * 1814 / 1024 - 227));
             r = clamp(0, 255, rt);
             g = clamp(0, 255, gt);
             b = clamp(0, 255, bt);
 //                image[getRotatedImageByteIndex(y, x, height)] = (hexFF << 24) | (b << 16) | (g << 8) | r;
             image[getRotatedImageByteIndex(y, x, height)] =
-                    (hexFF << 24) | (r << 16) | (g << 8) | b;
+                    static_cast<uint32_t>((hexFF << 24) | (r << 16) | (g << 8) | b);
         }
     }
 

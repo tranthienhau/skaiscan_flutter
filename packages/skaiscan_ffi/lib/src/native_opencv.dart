@@ -353,10 +353,10 @@ class NativeOpencv {
       return result;
     }
 
-    if (result is List) {
-      return Uint8List.fromList(
-          result.map<int>((item) => int.parse(item.toString())).toList());
-    }
+    // if (result is List) {
+    //   return Uint8List.fromList(
+    //       result.map<int>((item) => int.parse(item.toString())).toList());
+    // }
 
     throw Exception('Exception: $result');
     // final Uint8List bytes = await port.first as Uint8List;
@@ -467,6 +467,7 @@ void _isolateConvertCameraImageToBytes(Map<String, dynamic> data) {
 
   malloc.free(yPoiter);
   malloc.free(bytesLengthPtr);
+  malloc.free(matPtr);
 
   sendPort.send(copyBytes);
 }
@@ -547,7 +548,7 @@ void _isolateConvertCameraImageToMat(Map<String, dynamic> data) {
 
   Pointer<Void> matPtr =
       converCameraImageToMat(imageBuffer, isYUV, rotation, width, height);
-
+  malloc.free(imageBuffer);
   sendPort.send(matPtr.address);
 }
 
@@ -605,7 +606,9 @@ void _isolateCreateMatFromYUV420(Map<String, dynamic> data) {
       createMatFromYUV420(p, p1, p2, bytesPerRow, bytesPerPixel, width, height);
 
   // Uint8List imgData = imgP.asTypedList(width * height);
-
+  malloc.free(p);
+  malloc.free(p1);
+  malloc.free(p2);
   sendPort.send(matPtr.address);
 }
 
