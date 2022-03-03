@@ -41,11 +41,11 @@ class TfAcneScanService implements AcneScanService {
         // _interpreter = await Interpreter.fromAsset('model/model_fpn512.tflite',
         //     options: interpreterOptions);
 
-        _interpreter = await Interpreter.fromAsset('model/model_quant.tflite',
-            options: options);
-
-        // _interpreter = await Interpreter.fromAsset('model/model_fpn512.tflite',
+        // _interpreter = await Interpreter.fromAsset('model/model_quant.tflite',
         //     options: options);
+
+        _interpreter = await Interpreter.fromAsset('model/model_fpn512.tflite',
+            options: options);
       } catch (e) {
         _interpreter = await Interpreter.fromAsset('model/model_quant.tflite',
             options: options);
