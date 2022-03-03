@@ -14,6 +14,14 @@ class OnBoardingPage extends StatefulWidget {
 }
 
 class _OnBoardingPageState extends State<OnBoardingPage> {
+  final PageController _pageController = PageController();
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -28,23 +36,36 @@ class _OnBoardingPageState extends State<OnBoardingPage> {
   }
 
   Widget _buildBody(BuildContext context) {
-    return SafeArea(
-      child: Column(
-        children: [
-          Expanded(
-            child: PageView(
-              onPageChanged: (int page) {
-                BlocProvider.of<OnBoardingBloc>(context)
-                    .add(OnBoardingPageChanged(page));
-              },
-              children: const [
-                FirstOnBoardingTab(),
-                SecondOnBoardingTab(),
-              ],
+    return BlocListener<OnBoardingBloc, OnBoardingState>(
+      listenWhen: (_, current) => current is OnBoardingPageChangeSuccess,
+      listener: (context, state) {
+        if (state is OnBoardingPageChangeSuccess) {
+          _pageController.animateToPage(
+            state.pageIndex,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.linear,
+          );
+        }
+      },
+      child: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: (int page) {
+                  BlocProvider.of<OnBoardingBloc>(context)
+                      .add(OnBoardingPageChanged(page));
+                },
+                children: const [
+                  FirstOnBoardingTab(),
+                  SecondOnBoardingTab(),
+                ],
+              ),
             ),
-          ),
-          _buildBottom(context),
-        ],
+            _buildBottom(context),
+          ],
+        ),
       ),
     );
   }
@@ -67,25 +88,31 @@ class _OnBoardingPageState extends State<OnBoardingPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children:
               List.generate(state.pageCount, (index) => index).map((index) {
-            if (index == state.pageIndex) {
-              return Container(
+            // if (index == state.pageIndex) {
+            //
+            // }
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              child: Container(
                 height: 8,
-                width: 8,
+                width: index == state.pageIndex ? 8 : 24,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor,
+                  color: index == state.pageIndex
+                      ? Theme.of(context).primaryColor
+                      : AppColors.grey,
                   borderRadius: BorderRadius.circular(16),
                 ),
-              ).plf(value: 4);
-            }
+              ).plf(value: 4),
+            );
 
-            return Container(
-              height: 8,
-              width: 24,
-              decoration: BoxDecoration(
-                color: AppColors.grey,
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ).plf(value: 4);
+            // return Container(
+            //   height: 8,
+            //   width: 24,
+            //   decoration: BoxDecoration(
+            //     color: AppColors.grey,
+            //     borderRadius: BorderRadius.circular(16),
+            //   ),
+            // ).plf(value: 4);
           }).toList(),
         );
       },
@@ -103,7 +130,7 @@ class _OnBoardingPageState extends State<OnBoardingPage> {
         ],
       ),
       onPressed: () {
-        App.pushNamed(AppRoutes.introduce);
+        App.pushNamedAndPopUntil(AppRoutes.introduce, null, '/');
       },
     ).plf(value: 16);
   }

@@ -22,8 +22,16 @@ class _LoadingPageState extends State<LoadingPage> {
   Widget build(BuildContext context) {
     return BlocListener<ApplicationBloc, ApplicationState>(
       listener: (context, state) {
-        if (state is ApplicationLoadSuccess) {
+        if (state is ApplicationOnBoardingLoadSuccess) {
           App.pushNamedAndPopUntil(AppRoutes.onBoarding, null, '/');
+
+          return;
+        }
+
+        if (state is ApplicationIntroduceLoadSuccess) {
+          App.pushNamedAndPopUntil(AppRoutes.introduce, null, '/');
+
+          return;
         }
       },
       child: const Scaffold(

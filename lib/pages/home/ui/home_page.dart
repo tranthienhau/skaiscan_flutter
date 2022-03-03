@@ -6,6 +6,7 @@ import 'package:percent_indicator/percent_indicator.dart';
 import 'package:skaiscan/all_file/all_file.dart';
 import 'package:skaiscan/pages/home/bloc/home_bloc.dart';
 import 'package:skaiscan/services/camera_service.dart';
+import 'package:skaiscan/widgets/button/circle_button.dart';
 import 'package:skaiscan/widgets/button/common_primary_button.dart';
 import 'package:skaiscan/widgets/decoration/skaiscan_decoration.dart';
 import 'package:skaiscan/widgets/loading_indicator.dart';
@@ -19,13 +20,13 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late CameraService _cameraService;
+  // late CameraService _cameraService;
 
-  @override
-  void initState() {
-    super.initState();
-    _cameraService = GetIt.I<CameraService>();
-  }
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   // _cameraService = GetIt.I<CameraService>();
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -72,27 +73,37 @@ class _HomePageState extends State<HomePage> {
           );
         }
 
-        return _buildCameraView(data.cameraDescriptionList.last);
+        return _buildCameraView(
+          data.cameraDescriptionList.last,
+          context,
+        );
       },
     );
   }
 
-  Widget _buildCameraView(CameraDescription cameraDescription) {
+  Widget _buildCameraView(
+      CameraDescription cameraDescription, BuildContext context) {
     return CameraView(
       description: cameraDescription,
       onCaptured: (XFile file) async {},
+      viewInsets: MediaQuery.of(context).viewInsets,
     );
   }
 }
 
 class CameraView extends StatefulWidget {
-  const CameraView({Key? key, required this.description, this.onCaptured})
+  const CameraView(
+      {Key? key,
+      required this.description,
+      this.onCaptured,
+      required this.viewInsets})
       : super(key: key);
 
   @override
   _CameraViewState createState() => _CameraViewState();
   final CameraDescription description;
   final Function(XFile file)? onCaptured;
+  final EdgeInsets viewInsets;
 }
 
 class _CameraViewState extends State<CameraView> {
@@ -101,6 +112,7 @@ class _CameraViewState extends State<CameraView> {
 
   @override
   void initState() {
+    // BlocProvider.of<HomeBloc>(context).add(HomePaddingLoaded(widget.viewInsets));
     super.initState();
 
     _cameraService = GetIt.I<CameraService>();
@@ -119,7 +131,9 @@ class _CameraViewState extends State<CameraView> {
   @override
   Widget build(BuildContext context) {
     if (!(_controller?.value.isInitialized ?? false)) {
-      return const SizedBox();
+      return const Center(
+        child: LoadingIndicator(),
+      );
     }
 
     return _buildCameraView();
@@ -131,6 +145,11 @@ class _CameraViewState extends State<CameraView> {
       return const Center(
         child: LoadingIndicator(),
       );
+    }
+
+    double originTop = ViewUtils.getPercentHeight(percent: 0.08) + 10;
+    if (originTop < 60) {
+      originTop = 60;
     }
 
     return BlocBuilder<HomeBloc, HomeState>(
@@ -147,35 +166,39 @@ class _CameraViewState extends State<CameraView> {
               ),
               if (!state.data.allowScan)
                 Positioned(
-                  top: ViewUtils.getPercentHeight(percent: 0.1083),
+                  top: originTop,
                   left: 27,
                   right: 27,
-                  child: Center(
-                    child: Container(
-                      width: MediaQuery.of(context).size.width,
-                      height: (MediaQuery.of(context).size.width - 54) * 1.2,
-                      decoration: const SkaiscanDottedDecoration(
-                        shape: SkaiscanShape.box,
-                        dash: <int>[1, 1],
-                        divideSpace: 8,
-                        color: AppColors.dotLine,
+                  child: SafeArea(
+                    child: Center(
+                      child: Container(
+                        width: MediaQuery.of(context).size.width,
+                        height: (MediaQuery.of(context).size.width - 54) * 1.2,
+                        decoration: const SkaiscanDottedDecoration(
+                          shape: SkaiscanShape.box,
+                          dash: <int>[1, 1],
+                          divideSpace: 8,
+                          color: AppColors.dotLine,
+                        ),
                       ),
                     ),
                   ),
                 ),
               if (state.data.allowScan)
                 Positioned(
-                  top: ViewUtils.getPercentHeight(percent: 0.1083),
+                  top: originTop,
                   left: 27,
                   right: 27,
-                  child: Center(
-                    child: Container(
-                      width: MediaQuery.of(context).size.width,
-                      height: (MediaQuery.of(context).size.width - 54) * 1.2,
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: AppColors.dotLine,
-                          width: 1,
+                  child: SafeArea(
+                    child: Center(
+                      child: Container(
+                        width: MediaQuery.of(context).size.width,
+                        height: (MediaQuery.of(context).size.width - 54) * 1.2,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: AppColors.dotLine,
+                            width: 1,
+                          ),
                         ),
                       ),
                     ),
@@ -208,7 +231,7 @@ class _CameraViewState extends State<CameraView> {
                     ),
                   ),
                 ),
-              if (state.data.allowScan)
+              // if (state.data.allowScan)
                 Positioned(
                   left: 16,
                   right: 16,
@@ -217,6 +240,19 @@ class _CameraViewState extends State<CameraView> {
                     child: _buildButton(),
                   ),
                 ),
+              Positioned(
+                top: 10,
+                right: 16,
+                child: SafeArea(
+                  child: CircleButton(
+                    backgroundColor: AppColors.grey.withOpacity(0.5),
+                    child: Assets.icon.cancel.svg(),
+                    onPressed: () {
+                      App.pop();
+                    },
+                  ),
+                ),
+              ),
             ],
           ),
         );
@@ -236,9 +272,9 @@ class _CameraViewState extends State<CameraView> {
       ),
       onPressed: () async {
         _showProgressDialog(context, BlocProvider.of<HomeBloc>(context));
-        BlocProvider.of<HomeBloc>(context).add(HomeAcneScanned());
-        // BlocProvider.of<HomeBloc>(context)
-        //     .add(HomeAcneAssetScanned('assets/feature/acne_test.png'));
+        // BlocProvider.of<HomeBloc>(context).add(HomeAcneScanned());
+        BlocProvider.of<HomeBloc>(context)
+            .add(HomeAcneAssetScanned('assets/feature/acne_test.png'));
       },
     );
   }

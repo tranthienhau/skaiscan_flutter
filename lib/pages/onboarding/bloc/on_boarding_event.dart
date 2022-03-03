@@ -8,3 +8,5 @@ class OnBoardingPageChanged extends OnBoardingEvent {
 
   OnBoardingPageChanged(this.pageIndex);
 }
+
+class OnBoardingPageAutoChanged extends OnBoardingEvent {}

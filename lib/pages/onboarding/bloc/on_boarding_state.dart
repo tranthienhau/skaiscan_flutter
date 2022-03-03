@@ -11,3 +11,8 @@ abstract class OnBoardingState {
 class OnBoardingLoadSuccess extends OnBoardingState {
   const OnBoardingLoadSuccess(int pageIndex) : super(pageIndex);
 }
+
+
+class OnBoardingPageChangeSuccess extends OnBoardingState {
+  const OnBoardingPageChangeSuccess(int pageIndex) : super(pageIndex);
+}

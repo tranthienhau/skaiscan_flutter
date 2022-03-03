@@ -6,11 +6,13 @@ class HomeData {
     required this.cameraDescriptionList,
     this.scanPercent = 0,
     this.captureBytes,
+    // this.viewInsets = EdgeInsets.zero,
   });
 
   final bool allowScan;
   final List<CameraDescription> cameraDescriptionList;
   final int scanPercent;
+  // final EdgeInsets viewInsets;
   final Uint8List? captureBytes;
 
   HomeData copyWith({
@@ -18,9 +20,11 @@ class HomeData {
     Uint8List? captureBytes,
     List<CameraDescription>? cameraDescriptionList,
     int? scanPercent,
+    // EdgeInsets? viewInsets,
   }) {
     return HomeData(
       allowScan: allowScan ?? this.allowScan,
+      // viewInsets: viewInsets ?? this.viewInsets,
       captureBytes: captureBytes ?? this.captureBytes,
       scanPercent: scanPercent ?? this.scanPercent,
       cameraDescriptionList:
@@ -49,7 +53,8 @@ class HomeScanInProgress extends HomeState {
 }
 
 class HomeScanComplete extends HomeState {
-  const HomeScanComplete({required HomeData data,required this.acneList}) : super(data);
+  const HomeScanComplete({required HomeData data, required this.acneList})
+      : super(data);
   final List<Acne> acneList;
 }
 

@@ -49,7 +49,7 @@ class _IntroducePageState extends State<IntroducePage> {
         ],
       ),
       onPressed: () {
-        App.pushNamedAndPopUntil(AppRoutes.home, null, '/');
+        App.pushNamed(AppRoutes.home);
       },
     );
   }

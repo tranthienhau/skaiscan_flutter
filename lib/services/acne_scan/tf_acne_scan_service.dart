@@ -15,7 +15,7 @@ class TfAcneScanService implements AcneScanService {
   Float32List? _float32Bytes;
   late Interpreter _interpreter;
   final _outputSize = OUT_PUT_SIZE;
-
+  Delegate? _delegate;
   @override
   Future<void> init() async {
     ///Load model
@@ -40,10 +40,12 @@ class TfAcneScanService implements AcneScanService {
         // interpreterOptions.useNnApiForAndroid = true;
         // _interpreter = await Interpreter.fromAsset('model/model_fpn512.tflite',
         //     options: interpreterOptions);
-        // _interpreter = await Interpreter.fromAsset('model/model_quant.tflite',
-        //     options: options);
-        _interpreter = await Interpreter.fromAsset('model/model_fpn512.tflite',
+
+        _interpreter = await Interpreter.fromAsset('model/model_quant.tflite',
             options: options);
+
+        // _interpreter = await Interpreter.fromAsset('model/model_fpn512.tflite',
+        //     options: options);
       } catch (e) {
         _interpreter = await Interpreter.fromAsset('model/model_quant.tflite',
             options: options);
@@ -57,11 +59,14 @@ class TfAcneScanService implements AcneScanService {
             waitType: TFLGpuDelegateWaitType.active,
           ),
         );
+
         final interpreterOptions = InterpreterOptions()..addDelegate(delegate);
         interpreterOptions.threads = 4;
 
         _interpreter = await Interpreter.fromAsset('model/model_fpn512.tflite',
             options: interpreterOptions);
+
+        _delegate = delegate;
         // _interpreter = await Interpreter.fromAsset('model/model_fpn512.tflite',
         //     options: options);
       } catch (e) {
@@ -195,6 +200,12 @@ class TfAcneScanService implements AcneScanService {
 
   @override
   int get outPutSize => _outputSize;
+
+  @override
+  Future<void> dispose() async {
+    _interpreter.close();
+    _delegate?.delete();
+  }
 
 
 }

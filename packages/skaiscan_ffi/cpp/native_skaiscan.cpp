@@ -119,14 +119,14 @@ unsigned char *apply_acne_mask_color_v2(uint8_t *mask_bytes, uint8_t *origin_byt
     
     convert_black_to_transperant(mask_color, result_mask);
 
-    resize(result_mask, result_mask, origin_mat_bgra.size(), INTER_LINEAR);
+    resize(result_mask, result_mask, origin_mat_bgra.size(), INTER_CUBIC);
     
-    GaussianBlur(result_mask, result_mask, Size(11, 11), 0);
+    GaussianBlur(result_mask, result_mask, Size(3, 3), 0);
 
     Mat result;
     
     addWeighted(result_mask,
-                1, origin_mat_bgra, 1.0, 0, result);
+                0.8, origin_mat_bgra, 1.0, 0, result);
 
 //    resize(origin_resize, origin_resize, origin_mat_bgra.size(), INTER_LINEAR);
 

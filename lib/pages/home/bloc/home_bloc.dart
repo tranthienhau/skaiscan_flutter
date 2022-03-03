@@ -13,6 +13,7 @@ import 'package:get_it/get_it.dart';
 
 // import 'package:google_vision_api/google_vision_api.dart';
 import 'package:image/image.dart' as imglib;
+import 'package:skaiscan/core/app.dart';
 import 'package:skaiscan/model/acne.dart';
 import 'package:skaiscan/services/acne_scan/acne_scan_service.dart';
 import 'package:skaiscan/services/camera_service.dart';
@@ -56,6 +57,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<HomeAcneAssetScanned>(_onAcneAssetScanned);
     on<HomeAcneScanned>(_onAcneScanned);
     on<HomeCameraFaceChecked>(_onCameraFaceChecked);
+    // on<HomePaddingLoaded>(_oPaddingLoaded);
+
 
     _cameraStreamSubscription = _cameraService.cameraImageStream
         .listen((CameraImage cameraImage) async {
@@ -84,6 +87,21 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   Completer<void>? _scanCompleter;
   Completer<void>? _cameraCheckCompleter;
   Rectangle<int>? _uiRectangle;
+
+  // Future<void> _oPaddingLoaded(
+  //   HomePaddingLoaded event,
+  //   Emitter<HomeState> emit,
+  // ) async {
+  //
+  //   emit(
+  //     HomeLoadSuccess(
+  //       state.data.copyWith(
+  //         viewInsets: event.viewInsets,
+  //       ),
+  //     ),
+  //   );
+  //
+  // }
 
   /// Check face is in correct view
   Future<void> _onCameraFaceChecked(
@@ -183,25 +201,25 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       return;
     }
 
-    const uuid = Uuid();
-
-    try {
-      await AwsS3.uploadBytes(
-        bytes: imglib.encodeJpg(image),
-        accessKey: 'AKIASTXIMYTMY4CZ37ZO',
-        bucket: 'skaiscan-collect',
-        fileName: '${uuid.v1()}.jpeg',
-        secretKey: 'hh7l5aV6hyt0L5CmDDbBTXSCe2VlAkjaa6N/OGRC',
-        // acl: ,
-        destDir: '',
-        region: 'eu-central-1',
-      );
-    } catch (e, stack) {
-      _logService.error('Failed upload image', e.toString(), stack);
-    }
+    // const uuid = Uuid();
+    //
+    // try {
+    //   await AwsS3.uploadBytes(
+    //     bytes: imglib.encodeJpg(image),
+    //     accessKey: 'AKIASTXIMYTMY4CZ37ZO',
+    //     bucket: 'skaiscan-collect',
+    //     fileName: '${uuid.v1()}.jpeg',
+    //     secretKey: 'hh7l5aV6hyt0L5CmDDbBTXSCe2VlAkjaa6N/OGRC',
+    //     // acl: ,
+    //     destDir: '',
+    //     region: 'eu-central-1',
+    //   );
+    // } catch (e, stack) {
+    //   _logService.error('Failed upload image', e.toString(), stack);
+    // }
 
     ///Update progress to 30% for UI
-    emit(HomeScanInProgress(data.copyWith(scanPercent: 30)));
+    // emit(HomeScanInProgress(data.copyWith(scanPercent: 30)));
 
     ///Convert UI rect to image rect
     final Rectangle<int> cropRect =
@@ -210,7 +228,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     await _acneScanService.selectImage(image);
 
     ///Update progress to 50% for UI
-    emit(HomeScanInProgress(data.copyWith(scanPercent: 50)));
+    emit(HomeScanInProgress(data.copyWith(scanPercent: 30)));
 
     final result = await _acneScanService.getAcneBytes();
 
@@ -525,8 +543,14 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     const offsetX = 12;
     const offsetY = 12;
 
+    double originTop = ViewUtils.getPercentHeight(percent: 0.08) + 10;
+    if (originTop < 60) {
+      originTop = 60;
+    }
+
     ///calculate rectangle in camera
-    final top = ViewUtils.getPercentHeight(percent: 0.1083) - offsetY;
+    final top =
+        originTop + MediaQuery.of(App.overlayContext!).padding.top - offsetY;
 
     final screenWidth = ViewUtils.getPercentWidth(percent: 1.0);
 
@@ -581,6 +605,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   @override
   Future<void> close() {
     _cameraService.dispose();
+    _faceDetectorService.dispose();
+    _acneScanService.dispose();
     _cameraStreamSubscription.cancel();
     return super.close();
   }

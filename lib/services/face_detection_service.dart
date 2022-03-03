@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
@@ -51,11 +50,15 @@ class FaceDetectorService {
   late FaceDetector _faceDetector;
 
   late Completer<List<FaceRectangle>> _isolateCompleter;
+  late Completer<void> _isolateCloseCompleter;
 
   FaceDetector get faceDetector => _faceDetector;
 
+  // final bool _useIsolate = Platform.isAndroid;
+  final bool _useIsolate = false;
+
   void initialize() {
-    if (Platform.isAndroid) {
+    if (_useIsolate) {
       _isolateManager = IsolateHandler();
       _isolateManager.spawn<dynamic>(
         _isolateFaceDetection,
@@ -72,10 +75,24 @@ class FaceDetectorService {
   }
 
   void communicationFromIsolate(dynamic data) {
-    if (data is List) {
-      final rectList = data.map((json) => FaceRectangle.fromMap(json)).toList();
+    if (data is Map) {
+      switch (data['message']) {
+        case 'close':
+          _isolateCloseCompleter.complete();
+          break;
+        case 'detect':
+          final dataList = data['data'] as List;
+          final rectList =
+              dataList.map((json) => FaceRectangle.fromMap(json)).toList();
 
-      _isolateCompleter.complete(rectList);
+          _isolateCompleter.complete(rectList);
+          break;
+        default:
+          _isolateCompleter.complete(<FaceRectangle>[]);
+          break;
+      }
+    } else {
+      _isolateCompleter.complete(<FaceRectangle>[]);
     }
 
     // We will no longer be needing the isolate, let's dispose of it.
@@ -83,7 +100,7 @@ class FaceDetectorService {
   }
 
   Future<List<FaceRectangle>> getFacesFromImage(CameraImage image) async {
-    if (Platform.isAndroid) {
+    if (_useIsolate) {
       _isolateCompleter = Completer<List<FaceRectangle>>();
 
       _isolateManager.send(
@@ -136,8 +153,18 @@ class FaceDetectorService {
     }
   }
 
-  dispose() {
-    _faceDetector.close();
+  Future<void> dispose() async {
+    if (_useIsolate) {
+      _isolateCloseCompleter = Completer<void>();
+      _isolateManager.send(
+        {'message': 'close'},
+        to: 'isolateFaceDetection',
+      );
+      await _isolateCloseCompleter.future;
+      _isolateManager.kill("isolateFaceDetection");
+    } else {
+      _faceDetector.close();
+    }
   }
 }
 
@@ -163,7 +190,9 @@ void _isolateFaceDetection(Map<String, dynamic> context) {
 
     switch (mapData['message']) {
       case 'close':
-        faceDetector.close();
+        await faceDetector.close();
+        messenger.send({'data': [], 'message': mapData['message']});
+
         break;
       case 'detect':
         final Uint8List bytes = mapData['bytes'];
@@ -209,9 +238,9 @@ void _isolateFaceDetection(Map<String, dynamic> context) {
                   ).toMap())
               .toList();
 
-          messenger.send(faceRectList);
+          messenger.send({'data': faceRectList, 'message': mapData['message']});
         } catch (e) {
-          messenger.send([]);
+          messenger.send({'data': [], 'message': mapData['message']});
         }
 
         break;

@@ -4,7 +4,8 @@ import 'package:skaiscan/core/styles/app_style_config.dart';
 import 'package:skaiscan/services/acne_scan/acne_scan_service.dart';
 import 'package:skaiscan/services/acne_scan/tf_acne_scan_service.dart';
 import 'package:skaiscan/services/camera_service.dart';
-import 'package:skaiscan/services/face_detection_service.dart';
+import 'package:skaiscan/services/config_service/secure_config_service.dart';
+import 'package:skaiscan/services/config_service/secure_storage_service.dart';
 
 /// Setup services locator
 /// Must call this function before the [startApp] is called.
@@ -18,6 +19,8 @@ void setupLocator() {
 void _setupInDependentService() {
   GetIt.I.registerLazySingleton<AppStyleConfig>(() => AppStyleConfig());
   GetIt.I.registerLazySingleton<AppConfig>(() => AppConfig());
+  GetIt.I
+      .registerLazySingleton<SecureConfigService>(() => SecureStorageService());
 }
 
 /// Register the service that it is dependent on other services.

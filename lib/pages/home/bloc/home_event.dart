@@ -20,3 +20,9 @@ class HomeAcneAssetScanned extends HomeEvent {
 }
 
 class HomeLoaded extends HomeEvent {}
+
+// class HomePaddingLoaded extends HomeEvent {
+//   final EdgeInsets viewInsets;
+//
+//   HomePaddingLoaded(this.viewInsets);
+// }
