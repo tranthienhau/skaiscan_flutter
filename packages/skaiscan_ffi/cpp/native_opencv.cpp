@@ -317,6 +317,42 @@ unsigned char *convert_camera_image_to_mat_v3(uint8_t *plane0, uint8_t *plane1, 
 
 
 FUNCTION_ATTRIBUTE
+unsigned char *convert_camera_image_to_bytes_jpg(uint8_t *plane0, uint8_t *plane1, uint8_t *plane2,
+                                              int32_t *imgLengthBytes, bool is_yuv, int bytesPerRow,
+                                              int bytesPerPixel, int width, int height) {
+
+    Mat frame;
+
+    uint32_t *rgba_bytes = nullptr;
+
+    if (is_yuv) {
+        rgba_bytes = convert_yuv_to_rbga_bytes(plane0, plane1, plane2, bytesPerRow, bytesPerPixel,
+                                               width, height);
+        cv::Mat rgba_mat((width), (height), CV_8UC4, rgba_bytes);
+        cvtColor(rgba_mat, frame, COLOR_RGBA2BGRA);
+        flip(frame, frame, 0);
+    } else {
+        frame = Mat(height, width, CV_8UC4, plane0);
+    }
+
+    std::vector<uchar> buf(1);
+    cv::imencode(".jpg", frame, buf);
+    *imgLengthBytes = buf.size();
+
+    unsigned char *ret = (unsigned char *) malloc(buf.size());
+    memcpy(ret, buf.data(), buf.size());
+
+    if (rgba_bytes != nullptr) {
+        delete[] rgba_bytes;
+    }
+
+    frame.release();
+
+    return ret;
+}
+
+
+FUNCTION_ATTRIBUTE
 void *create_mat_from_yuv(uint8_t *plane0, uint8_t *plane1, uint8_t *plane2, int bytesPerRow,
                           int bytesPerPixel, int width, int height) {
     int hexFF = 255;
@@ -409,6 +445,35 @@ void *crop_image_bytes(unsigned char *bytes, int32_t *imgLengthBytes, int32_t x,
 
     std::vector<uchar> buf(1);
     cv::imencode(".bmp", cropped_image, buf);
+    *imgLengthBytes = buf.size();
+
+    unsigned char *ret = (unsigned char *) malloc(buf.size());
+    memcpy(ret, buf.data(), buf.size());
+
+    return ret;
+}
+
+
+FUNCTION_ATTRIBUTE
+void *crop_image_jpg_bytes(unsigned char *bytes, int32_t *imgLengthBytes, int32_t x, int32_t y, int32_t width,
+                       int32_t height) {
+    cv::Mat src;
+    int32_t a = *imgLengthBytes;
+    std::vector<unsigned char> m;
+
+    while (a >= 0) {
+        m.push_back(*(bytes++));
+        a--;
+    }
+
+    src = cv::imdecode(m, cv::IMREAD_UNCHANGED);
+
+    cv::Mat cropped_image;
+
+    cropped_image = src(Range(y, y + height), Range(x, x + width));
+
+    std::vector<uchar> buf(1);
+    cv::imencode(".jpg", cropped_image, buf);
     *imgLengthBytes = buf.size();
 
     unsigned char *ret = (unsigned char *) malloc(buf.size());

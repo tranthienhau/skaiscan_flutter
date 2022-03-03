@@ -235,13 +235,22 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     ///Update progress to 60% for UI
     emit(HomeScanInProgress(data.copyWith(scanPercent: 60)));
 
-    Uint8List finalResult = await _nativeSkaiscan.applyAcneMaskColorV2(
-      maskBytes: Uint8List.fromList(result),
-      originBytes: bytes,
-      maskHeight: _acneScanService.outPutSize,
-      maskWidth: _acneScanService.outPutSize,
-      originHeight: image.height,
-      originWidth: image.width,
+    // Uint8List finalResult = await _nativeSkaiscan.applyAcneMaskColorV2(
+    //   maskBytes: Uint8List.fromList(result),
+    //   originBytes: bytes,
+    //   maskHeight: _acneScanService.outPutSize,
+    //   maskWidth: _acneScanService.outPutSize,
+    //   originHeight: image.height,
+    //   originWidth: image.width,
+    // );
+
+    Uint8List finalResult = await _nativeSkaiscan.applyAcneMaskColorJpg(
+        maskBytes: Uint8List.fromList(result),
+        originBytes: bytes,
+        maskHeight: _acneScanService.outPutSize,
+        maskWidth: _acneScanService.outPutSize,
+        originHeight: image.height,
+        originWidth: image.width,
     );
 
     ///Filter to get only value different 0, 0-> background
@@ -265,7 +274,17 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     );
 
     ///Crop image with UI rect
-    finalResult = await _nativeOpencv.cropImageBytes(
+    // finalResult = await _nativeOpencv.cropImageBytes(
+    //   bytes: finalResult,
+    //   rect: CvRectangle(
+    //     left: cropRect.left,
+    //     top: cropRect.top,
+    //     width: cropRect.width,
+    //     height: cropRect.height,
+    //   ),
+    // );
+    final jpgImage = imglib.decodeImage(finalResult);
+    finalResult = await _nativeOpencv.cropImageJpgBytes(
       bytes: finalResult,
       rect: CvRectangle(
         left: cropRect.left,
@@ -323,6 +342,20 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         height: cameraImage.height,
       );
 
+      // final bytes = await _nativeOpencv.convertCameraImageToJpgBytes(
+      //   yBytes: cameraImage.planes[0].bytes,
+      //   uBytes: Platform.isAndroid ? cameraImage.planes[1].bytes : null,
+      //   vBytes: Platform.isAndroid ? cameraImage.planes[2].bytes : null,
+      //   isYUV: Platform.isAndroid,
+      //   bytesPerRow: Platform.isAndroid ? cameraImage.planes[1].bytesPerRow : 0,
+      //   bytesPerPixel:
+      //   Platform.isAndroid ? cameraImage.planes[1].bytesPerPixel ?? 0 : 0,
+      //   width: cameraImage.width,
+      //   height: cameraImage.height,
+      // );
+
+
+
       ///Update progress to 10% for UI
       emit(HomeScanInProgress(data.copyWith(scanPercent: 10)));
 
@@ -369,6 +402,16 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         originHeight: cameraImage.height,
         originWidth: cameraImage.width,
       );
+      //
+      // Uint8List finalResult = await _nativeSkaiscan.applyAcneMaskColorJpg(
+      //   maskBytes: Uint8List.fromList(result),
+      //   originBytes: bytes,
+      //   maskHeight: _acneScanService.outPutSize,
+      //   maskWidth: _acneScanService.outPutSize,
+      //   originHeight: cameraImage.height,
+      //   originWidth: cameraImage.width,
+      // );
+
 
       ///Filter to get only value different 0, 0-> background
       final acneListFilter = result.toSet().where((element) => element != 0);
@@ -396,6 +439,16 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
             height: rect.height,
           ),
         );
+
+        // finalResult = await _nativeOpencv.cropImageJpgBytes(
+        //   bytes: finalResult,
+        //   rect: CvRectangle(
+        //     left: rect.left,
+        //     top: rect.top,
+        //     width: rect.width,
+        //     height: rect.height,
+        //   ),
+        // );
       }
 
       const uuid = Uuid();

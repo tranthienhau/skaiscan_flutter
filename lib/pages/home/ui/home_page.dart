@@ -231,7 +231,7 @@ class _CameraViewState extends State<CameraView> {
                     ),
                   ),
                 ),
-              // if (state.data.allowScan)
+              if (state.data.allowScan)
                 Positioned(
                   left: 16,
                   right: 16,
@@ -272,9 +272,9 @@ class _CameraViewState extends State<CameraView> {
       ),
       onPressed: () async {
         _showProgressDialog(context, BlocProvider.of<HomeBloc>(context));
-        // BlocProvider.of<HomeBloc>(context).add(HomeAcneScanned());
-        BlocProvider.of<HomeBloc>(context)
-            .add(HomeAcneAssetScanned('assets/feature/acne_test.png'));
+        BlocProvider.of<HomeBloc>(context).add(HomeAcneScanned());
+        // BlocProvider.of<HomeBloc>(context)
+        //     .add(HomeAcneAssetScanned('assets/feature/acne_test.png'));
       },
     );
   }

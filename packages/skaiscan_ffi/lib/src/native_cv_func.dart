@@ -128,6 +128,23 @@ final Pointer<Uint8> Function(Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>,
                     Int32)>>('convert_camera_image_to_mat_v3')
         .asFunction();
 
+final Pointer<Uint8> Function(Pointer<Uint8>, Pointer<Uint8>, Pointer<Uint8>,
+    Pointer<Int32>, bool, int, int, int, int) converCameraImageToJpgBytes =
+nativeLib
+    .lookup<
+    NativeFunction<
+        Pointer<Uint8> Function(
+            Pointer<Uint8>,
+            Pointer<Uint8>,
+            Pointer<Uint8>,
+            Pointer<Int32>,
+            Bool,
+            Int32,
+            Int32,
+            Int32,
+            Int32)>>('convert_camera_image_to_bytes_jpg')
+    .asFunction();
+
 final Pointer Function(Pointer<Uint8> bytes, int width, int height)
     converRBGABytesToMat = nativeLib
         .lookup<NativeFunction<Pointer Function(Pointer<Uint8>, Int32, Int32)>>(
@@ -141,3 +158,11 @@ final Pointer<Uint8> Function(Pointer<Uint8>, Pointer<Int32>, int, int, int, int
                 Pointer<Uint8> Function(Pointer<Uint8>, Pointer<Int32>, Int32,
                     Int32, Int32, Int32)>>('crop_image_bytes')
         .asFunction();
+
+final Pointer<Uint8> Function(Pointer<Uint8>, Pointer<Int32>, int, int, int, int)
+cropImageJpgBytes = nativeLib
+    .lookup<
+    NativeFunction<
+        Pointer<Uint8> Function(Pointer<Uint8>, Pointer<Int32>, Int32,
+            Int32, Int32, Int32)>>('crop_image_jpg_bytes')
+    .asFunction();

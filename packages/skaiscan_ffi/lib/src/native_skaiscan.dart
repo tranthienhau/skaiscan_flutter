@@ -102,6 +102,42 @@ class NativeSkaiscan {
     return bytes;
   }
 
+
+  Future<Uint8List> applyAcneMaskColorJpg({
+    required Uint8List maskBytes,
+    required Uint8List originBytes,
+    required int originWidth,
+    required int originHeight,
+    required int maskWidth,
+    required int maskHeight,
+  }) async {
+    final port = ReceivePort();
+
+    /// Spawning an isolate
+    Isolate.spawn<Map<String, dynamic>>(
+      _isolateApplyAcneMaskColorJpg,
+      {
+        'sendPort': port.sendPort,
+        'originWidth': originWidth,
+        'originHeight': originHeight,
+        'maskWidth': maskWidth,
+        'maskHeight': maskHeight,
+        'maskBytes': maskBytes,
+        'originBytes': originBytes,
+      },
+      onError: port.sendPort,
+      // onExit: port.sendPort,
+    );
+
+    final Uint8List? bytes = await port.first as Uint8List?;
+
+    if (bytes == null) {
+      throw Exception('Can not create cv:Mat pointer');
+    }
+
+    return bytes;
+  }
+
   Future<Uint8List> convertMaskToColor({
     required Uint8List maskBytes,
     required int width,
@@ -155,6 +191,38 @@ void _isolateConvertMaskToColor(Map<String, dynamic> data) {
   malloc.free(imgByteLength);
   malloc.free(maskPointer);
   malloc.free(resultPtr);
+
+  sendPort.send(copyBytes);
+}
+
+void _isolateApplyAcneMaskColorJpg(Map<String, dynamic> data) {
+  final Uint8List maskBytes = data['maskBytes'];
+  final Uint8List originBytes = data['originBytes'];
+  final int originWidth = data['originWidth'];
+  final int originHeight = data['originHeight'];
+  final int maskWidth = data['maskWidth'];
+  final int maskHeight = data['maskHeight'];
+
+  final SendPort sendPort = data['sendPort'];
+
+  final maskPointer = _intListToArray(maskBytes);
+  final originPointer = _intListToArray(originBytes);
+
+  Pointer<Int32> imgByteLength = malloc.allocate<Int32>(sizeOf<Int32>());
+
+  imgByteLength.value = originBytes.length;
+
+  Pointer<Uint8> resultPtr = applyAcneMaskColorJpg(maskPointer, originPointer,
+      imgByteLength, maskWidth, maskHeight, originWidth, originHeight);
+
+  Uint8List imageBytes = resultPtr.asTypedList(imgByteLength.value);
+
+  Uint8List copyBytes = Uint8List.fromList(imageBytes);
+
+  malloc.free(imgByteLength);
+  malloc.free(maskPointer);
+  malloc.free(resultPtr);
+  malloc.free(originPointer);
 
   sendPort.send(copyBytes);
 }

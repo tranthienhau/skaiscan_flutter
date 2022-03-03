@@ -274,6 +274,7 @@ class NativeOpencv {
 
     return imageData;
   }
+
   //
   // Future<NativeImage> createImageFromCameraImageV2({
   //   required Uint8List yBytes,
@@ -364,6 +365,44 @@ class NativeOpencv {
     // return bytes;
   }
 
+  Future<Uint8List> convertCameraImageToJpgBytes({
+    required Uint8List yBytes,
+    required Uint8List? uBytes,
+    required Uint8List? vBytes,
+    required int bytesPerRow,
+    required int bytesPerPixel,
+    required int width,
+    required int height,
+    required bool isYUV,
+  }) async {
+    final port = ReceivePort();
+
+    /// Spawning an isolate
+    Isolate.spawn<Map<String, dynamic>>(
+      _isolateConvertCameraImageToJpgBytes,
+      {
+        'yBytes': yBytes,
+        'uBytes': uBytes,
+        'vBytes': vBytes,
+        'isYUV': isYUV,
+        'bytesPerRow': bytesPerRow,
+        'bytesPerPixel': bytesPerPixel,
+        'width': width,
+        'height': height,
+        'sendPort': port.sendPort,
+      },
+      onError: port.sendPort,
+      // onExit: port.sendPort,
+    );
+
+    final result = await port.first;
+    if (result is Uint8List) {
+      return result;
+    }
+
+    throw Exception('Exception: $result');
+  }
+
   Future<Uint8List> cropImageBytes({
     required Uint8List bytes,
     required CvRectangle rect,
@@ -390,8 +429,31 @@ class NativeOpencv {
     return resultBytes;
   }
 
-// Future<void> cropImage(NativeImage image, CvRectangle rect) async {}
+  Future<Uint8List> cropImageJpgBytes({
+    required Uint8List bytes,
+    required CvRectangle rect,
+  }) async {
+    final port = ReceivePort();
 
+    /// Spawning an isolate
+    Isolate.spawn<Map<String, dynamic>>(
+      _isolateCropImageJpgBytes,
+      {
+        'bytes': bytes,
+        'left': rect.left,
+        'top': rect.top,
+        'width': rect.width,
+        'height': rect.height,
+        'sendPort': port.sendPort,
+      },
+      onError: port.sendPort,
+      // onExit: port.sendPort,
+    );
+
+    final Uint8List resultBytes = await port.first as Uint8List;
+
+    return resultBytes;
+  }
 }
 
 void _isolateCropImageBytes(Map<String, dynamic> data) {
@@ -410,6 +472,34 @@ void _isolateCropImageBytes(Map<String, dynamic> data) {
 
   final imageBytesPointer =
       cropImageBytes(pointerBytes, lengthPtr, left, top, width, height);
+
+  Uint8List imageBytes = imageBytesPointer.asTypedList(lengthPtr.value);
+
+  final copyBytes = Uint8List.fromList(imageBytes);
+
+  malloc.free(pointerBytes);
+  malloc.free(lengthPtr);
+  malloc.free(imageBytesPointer);
+
+  sendPort.send(copyBytes);
+}
+
+void _isolateCropImageJpgBytes(Map<String, dynamic> data) {
+  final Uint8List bytes = data['bytes'];
+  final int left = data['left'];
+  final int top = data['top'];
+  final int width = data['width'];
+  final int height = data['height'];
+  final SendPort sendPort = data['sendPort'];
+
+  Pointer<Uint8> pointerBytes = _intListToArray(bytes);
+
+  Pointer<Int32> lengthPtr = malloc.allocate<Int32>(sizeOf<Int32>());
+
+  lengthPtr.value = bytes.length;
+
+  final imageBytesPointer =
+  cropImageJpgBytes(pointerBytes, lengthPtr, left, top, width, height);
 
   Uint8List imageBytes = imageBytesPointer.asTypedList(lengthPtr.value);
 
@@ -472,50 +562,63 @@ void _isolateConvertCameraImageToBytes(Map<String, dynamic> data) {
   sendPort.send(copyBytes);
 }
 
-// void _isolateConvertCameraImageToMatV2(Map<String, dynamic> data) {
-//   final Uint8List yBytes = data['yBytes'];
-//   final Uint8List? uBytes = data['uBytes'];
-//   final Uint8List? vBytes = data['vBytes'];
-//   final int bytesPerRow = data['bytesPerRow'];
-//   final int bytesPerPixel = data['bytesPerPixel'];
-//   final bool isYUV = data['isYUV'];
-//   final int width = data['width'];
-//   final int height = data['height'];
-//   final SendPort sendPort = data['sendPort'];
-//
-//   Pointer<Uint8> yPoiter = malloc.allocate(yBytes.length);
-//
-//   Uint8List pointerList = yPoiter.asTypedList(yBytes.length);
-//
-//   pointerList.setRange(0, yBytes.length, yBytes);
-//
-//   Pointer<Uint8> uPointer =
-//       uBytes != null ? malloc.allocate(uBytes.length) : nullptr;
-//   Pointer<Uint8> vPointer =
-//       vBytes != null ? malloc.allocate(vBytes.length) : nullptr;
-//
-//   if (isYUV) {
-//     Uint8List pointerUList = uPointer.asTypedList(uBytes!.length);
-//     Uint8List pointerVList = vPointer.asTypedList(vBytes!.length);
-//     pointerUList.setRange(0, uBytes.length, uBytes);
-//     pointerVList.setRange(0, vBytes.length, vBytes);
-//   }
-//   late Pointer matPtr;
-//   if (isYUV) {
-//     matPtr = converCameraImageToMatV2(yPoiter, uPointer, vPointer, isYUV,
-//         bytesPerRow, bytesPerPixel, width, height);
-//   } else {
-//     matPtr = converRBGABytesToMat(yPoiter, width, height);
-//   }
-//
-//   malloc.free(yPoiter);
-//   if (isYUV) {
-//     malloc.free(uPointer);
-//     malloc.free(vPointer);
-//   }
-//
-//   sendPort.send(matPtr.address);
-// }
+void _isolateConvertCameraImageToJpgBytes(Map<String, dynamic> data) {
+  final Uint8List yBytes = data['yBytes'];
+  final Uint8List? uBytes = data['uBytes'];
+  final Uint8List? vBytes = data['vBytes'];
+  final int bytesPerRow = data['bytesPerRow'];
+  final int bytesPerPixel = data['bytesPerPixel'];
+  final bool isYUV = data['isYUV'];
+  final int width = data['width'];
+  final int height = data['height'];
+  final SendPort sendPort = data['sendPort'];
+
+  Uint8List copyYBytes = Uint8List.fromList(yBytes);
+  Pointer<Uint8> yPoiter = malloc.allocate(copyYBytes.length);
+
+  Uint8List pointerList = yPoiter.asTypedList(copyYBytes.length);
+
+  pointerList.setRange(0, copyYBytes.length, copyYBytes);
+
+  Pointer<Uint8> uPointer =
+      uBytes != null ? malloc.allocate(uBytes.length) : nullptr;
+  Pointer<Uint8> vPointer =
+      vBytes != null ? malloc.allocate(vBytes.length) : nullptr;
+
+  if (isYUV) {
+    Uint8List pointerUList = uPointer.asTypedList(uBytes!.length);
+    Uint8List pointerVList = vPointer.asTypedList(vBytes!.length);
+    pointerUList.setRange(0, uBytes.length, uBytes);
+    pointerVList.setRange(0, vBytes.length, vBytes);
+  }
+  Pointer<Int32> bytesLengthPtr = malloc.allocate<Int32>(sizeOf<Int32>());
+
+  Pointer<Uint8> matPtr = converCameraImageToJpgBytes(
+      yPoiter,
+      uPointer,
+      vPointer,
+      bytesLengthPtr,
+      isYUV,
+      bytesPerRow,
+      bytesPerPixel,
+      width,
+      height);
+
+  Uint8List imageBytes = matPtr.asTypedList(bytesLengthPtr.value);
+
+  final copyBytes = Uint8List.fromList(imageBytes);
+
+  if (isYUV) {
+    malloc.free(uPointer);
+    malloc.free(vPointer);
+  }
+
+  malloc.free(yPoiter);
+  malloc.free(bytesLengthPtr);
+  malloc.free(matPtr);
+
+  sendPort.send(copyBytes);
+}
 
 void _isolateConvertCameraImageToMat(Map<String, dynamic> data) {
   final Uint8List yBytes = data['yBytes'];

@@ -18,23 +18,23 @@ add_library(native-lib SHARED ${SRC_FILES})
 # target_link_libraries(your_jni_target ${OpenCV_LIBS})
 
 #add_library(libopencv_core STATIC IMPORTED)
-#set_target_properties(libopencv_core PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/src/main/opencv2_tiny/libs/${ANDROID_ABI}/libopencv_core.a)
-
+#set_target_properties(libopencv_core PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/src/main/opencv2/static_libs/${ANDROID_ABI}/libopencv_core.a)
+#
 #add_library(libopencv_features2d STATIC IMPORTED)
-#set_target_properties(libopencv_features2d PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/src/main/opencv2_tiny/libs/${ANDROID_ABI}/libopencv_features2d.a)
-
+#set_target_properties(libopencv_features2d PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/src/main/opencv2/static_libs/${ANDROID_ABI}/libopencv_features2d.a)
+#
 #add_library(libopencv_highgui STATIC IMPORTED)
-#set_target_properties(libopencv_highgui PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/src/main/opencv2_tiny/libs/${ANDROID_ABI}/libopencv_highgui.a)
-
+#set_target_properties(libopencv_highgui PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/src/main/opencv2/static_libs/${ANDROID_ABI}/libopencv_highgui.a)
+#
 #add_library(libopencv_imgproc STATIC IMPORTED)
-#set_target_properties(libopencv_imgproc PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/src/main/opencv2_tiny/libs/${ANDROID_ABI}/libopencv_imgproc.a)
-
+#set_target_properties(libopencv_imgproc PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/src/main/opencv2/static_libs/${ANDROID_ABI}/libopencv_imgproc.a)
+#
 #add_library(libopencv_photo STATIC IMPORTED)
-#set_target_properties(libopencv_photo PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/src/main/opencv2_tiny/libs/${ANDROID_ABI}/libopencv_photo.a)
+#set_target_properties(libopencv_photo PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/src/main/opencv2/static_libs/${ANDROID_ABI}/libopencv_photo.a)
 
 #add_library(libopencv_video STATIC IMPORTED)
-#set_target_properties(libopencv_video PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/src/main/opencv2_tiny/libs/${ANDROID_ABI}/libopencv_video.a)
-
+#set_target_properties(libopencv_video PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/src/main/opencv2/static_libs/${ANDROID_ABI}/libopencv_video.a)
+#
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/main/opencv2/include)
 add_library(lib_opencv SHARED IMPORTED)
@@ -45,11 +45,11 @@ target_link_libraries(native-lib ${log-lib} ${android-lib})
 target_link_libraries(native-lib
                       z
                       #${OpenCV_LIBS}
-                      #libopencv_core
-                      #libopencv_features2d
-                      #libopencv_highgui
-                      #libopencv_imgproc
-                      #libopencv_photo
+#                      libopencv_core
+#                      libopencv_features2d
+#                      libopencv_highgui
+#                      libopencv_imgproc
+#                      libopencv_photo
                       #libopencv_video
                       lib_opencv
                       android
