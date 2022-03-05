@@ -58,3 +58,27 @@ final _ApplyAcneMaskColorFunc applyAcneMaskColorJpg = nativeLib
     .lookup<NativeFunction<_CApplyAcneMaskColorFunc>>(
         'apply_acne_mask_color_jpg')
     .asFunction();
+
+typedef _ThreshHoldAcneMaskBytesFunc = Pointer<Uint8> Function(
+    Pointer<Uint8> maskPointer, Pointer<Int32>, int, int);
+
+typedef _CThreshHoldAcneMaskBytesFunc = Pointer<Uint8> Function(
+  Pointer<Uint8> maskPointer,
+  Pointer<Int32>,
+  Int32,
+  Int32,
+);
+
+final _ThreshHoldAcneMaskBytesFunc threshHoldAcneMaskBytes = nativeLib
+    .lookup<NativeFunction<_CThreshHoldAcneMaskBytesFunc>>(
+        'thresh_hold_acne_mask_bytes')
+    .asFunction();
+
+final Pointer<Void> Function(
+        Pointer<Uint8> bytes, int width, int height, int index)
+    threshHoldAcneIndexMaskBytesToMat = nativeLib
+        .lookup<
+            NativeFunction<
+                Pointer<Void> Function(Pointer<Uint8>, Int32, Int32,
+                    Int32)>>('thresh_hold_acne_index_mask_bytes_to_mat')
+        .asFunction();

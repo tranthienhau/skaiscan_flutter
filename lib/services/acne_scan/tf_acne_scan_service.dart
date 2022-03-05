@@ -16,6 +16,7 @@ class TfAcneScanService implements AcneScanService {
   late Interpreter _interpreter;
   final _outputSize = OUT_PUT_SIZE;
   Delegate? _delegate;
+
   @override
   Future<void> init() async {
     ///Load model
@@ -41,6 +42,7 @@ class TfAcneScanService implements AcneScanService {
         // _interpreter = await Interpreter.fromAsset('model/model_fpn512.tflite',
         //     options: interpreterOptions);
 
+        //
         // _interpreter = await Interpreter.fromAsset('model/model_quant.tflite',
         //     options: options);
 
@@ -52,6 +54,8 @@ class TfAcneScanService implements AcneScanService {
       }
     } else {
       try {
+        // _interpreter = await Interpreter.fromAsset('model/model_quant.tflite',
+        //     options: options);
         Delegate delegate = GpuDelegate(
           options: GpuDelegateOptions(
             enableQuantization: false,
@@ -206,8 +210,10 @@ class TfAcneScanService implements AcneScanService {
     _interpreter.close();
     _delegate?.delete();
   }
+}
 
-
+void _isolateInit(Map<String, dynamic> data) {
+  final modelPath = data['modelPath'];
 }
 
 void _isolateAcneScan(Map<String, dynamic> data) {

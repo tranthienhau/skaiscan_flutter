@@ -33,6 +33,34 @@ class GpuDelegate implements Delegate {
   }
 }
 
+
+/// Metal Delegate for iOS
+// class CustomGpuDelegate implements Delegate {
+//   Pointer<TfLiteDelegate> _delegate;
+//   bool _deleted = false;
+//
+//   @override
+//   Pointer<TfLiteDelegate> get base => _delegate;
+//
+//   CustomGpuDelegate._(this._delegate);
+//
+//   factory CustomGpuDelegate({GpuDelegateOptions? options}) {
+//     if (options == null) {
+//       return CustomGpuDelegate._(
+//         tflGpuDelegateCreate(nullptr),
+//       );
+//     }
+//     return CustomGpuDelegate._(tflGpuDelegateCreate(options.base));
+//   }
+//
+//   @override
+//   void delete() {
+//     checkState(!_deleted, message: 'TfLiteGpuDelegate already deleted.');
+//     tflGpuDelegateDelete(_delegate);
+//     _deleted = true;
+//   }
+// }
+
 /// Metal Delegate options
 class GpuDelegateOptions {
   Pointer<TFLGpuDelegateOptions> _options;

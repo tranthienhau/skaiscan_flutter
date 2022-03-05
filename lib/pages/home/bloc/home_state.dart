@@ -12,6 +12,7 @@ class HomeData {
   final bool allowScan;
   final List<CameraDescription> cameraDescriptionList;
   final int scanPercent;
+
   // final EdgeInsets viewInsets;
   final Uint8List? captureBytes;
 
@@ -31,6 +32,11 @@ class HomeData {
           cameraDescriptionList ?? this.cameraDescriptionList,
     );
   }
+
+  @override
+  String toString() {
+    return 'HomeData{allowScan: $allowScan, scanPercent: $scanPercent}';
+  }
 }
 
 @immutable
@@ -38,6 +44,11 @@ abstract class HomeState {
   final HomeData data;
 
   const HomeState(this.data);
+
+  @override
+  String toString() {
+    return '${super.toString()}: {${data.toString()}}';
+  }
 }
 
 class HomeLoading extends HomeState {

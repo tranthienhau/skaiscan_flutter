@@ -49,16 +49,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     _acneScanService = acneScanService ?? GetIt.I<AcneScanService>();
     // _visionApiClient = visionApiClient ?? GetIt.I<VisionApiClient>();
     _logService = logService ?? LoggerService('HomeBloc');
-    // _mlService = mlService ?? MLService();
-    // _faceDetectorService =
-    //     faceDetectorService ?? GetIt.I<FaceDetectorService>();
     _faceDetectorService.initialize();
     on<HomeLoaded>(_onLoaded);
-    on<HomeAcneAssetScanned>(_onAcneAssetScanned);
     on<HomeAcneScanned>(_onAcneScanned);
     on<HomeCameraFaceChecked>(_onCameraFaceChecked);
-    // on<HomePaddingLoaded>(_oPaddingLoaded);
-
 
     _cameraStreamSubscription = _cameraService.cameraImageStream
         .listen((CameraImage cameraImage) async {
@@ -88,20 +82,6 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   Completer<void>? _cameraCheckCompleter;
   Rectangle<int>? _uiRectangle;
 
-  // Future<void> _oPaddingLoaded(
-  //   HomePaddingLoaded event,
-  //   Emitter<HomeState> emit,
-  // ) async {
-  //
-  //   emit(
-  //     HomeLoadSuccess(
-  //       state.data.copyWith(
-  //         viewInsets: event.viewInsets,
-  //       ),
-  //     ),
-  //   );
-  //
-  // }
 
   /// Check face is in correct view
   Future<void> _onCameraFaceChecked(
@@ -175,142 +155,6 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     _cameraCheckCompleter?.complete();
   }
 
-  /// Scan acne from assets file
-  Future<void> _onAcneAssetScanned(
-    HomeAcneAssetScanned event,
-    Emitter<HomeState> emit,
-  ) async {
-    if (!(_scanCompleter?.isCompleted ?? true)) {
-      return;
-    }
-
-    _scanCompleter = Completer<void>();
-
-    final data = state.data;
-
-    final byteData = await rootBundle.load(event.filePath);
-
-    final bytes = byteData.buffer.asUint8List();
-
-    final image = imglib.decodeImage(bytes);
-
-    ///Update progress to 10% for UI
-    emit(HomeScanInProgress(data.copyWith(scanPercent: 10)));
-
-    if (image == null) {
-      return;
-    }
-
-    // const uuid = Uuid();
-    //
-    // try {
-    //   await AwsS3.uploadBytes(
-    //     bytes: imglib.encodeJpg(image),
-    //     accessKey: 'AKIASTXIMYTMY4CZ37ZO',
-    //     bucket: 'skaiscan-collect',
-    //     fileName: '${uuid.v1()}.jpeg',
-    //     secretKey: 'hh7l5aV6hyt0L5CmDDbBTXSCe2VlAkjaa6N/OGRC',
-    //     // acl: ,
-    //     destDir: '',
-    //     region: 'eu-central-1',
-    //   );
-    // } catch (e, stack) {
-    //   _logService.error('Failed upload image', e.toString(), stack);
-    // }
-
-    ///Update progress to 30% for UI
-    // emit(HomeScanInProgress(data.copyWith(scanPercent: 30)));
-
-    ///Convert UI rect to image rect
-    final Rectangle<int> cropRect =
-        _calculateCropRectInImage(image.width, image.height);
-
-    await _acneScanService.selectImage(image);
-
-    ///Update progress to 50% for UI
-    emit(HomeScanInProgress(data.copyWith(scanPercent: 30)));
-
-    final result = await _acneScanService.getAcneBytes();
-
-    ///Update progress to 60% for UI
-    emit(HomeScanInProgress(data.copyWith(scanPercent: 60)));
-
-    // Uint8List finalResult = await _nativeSkaiscan.applyAcneMaskColorV2(
-    //   maskBytes: Uint8List.fromList(result),
-    //   originBytes: bytes,
-    //   maskHeight: _acneScanService.outPutSize,
-    //   maskWidth: _acneScanService.outPutSize,
-    //   originHeight: image.height,
-    //   originWidth: image.width,
-    // );
-
-    Uint8List finalResult = await _nativeSkaiscan.applyAcneMaskColorJpg(
-        maskBytes: Uint8List.fromList(result),
-        originBytes: bytes,
-        maskHeight: _acneScanService.outPutSize,
-        maskWidth: _acneScanService.outPutSize,
-        originHeight: image.height,
-        originWidth: image.width,
-    );
-
-    ///Filter to get only value different 0, 0-> background
-    final acneListFilter = result.toSet().where((element) => element != 0);
-
-    ///Convert filter array to acne list
-    /// 1 -> papules
-    /// 2 -> blackheads
-    /// 3 -> pustules
-    /// 4 -> whiteheads
-    final acneListResult =
-        acneListFilter.map((index) => Acne.values[index - 1]).toList();
-
-    ///Update progress to 80% for UI
-    emit(
-      HomeScanInProgress(
-        data.copyWith(
-          scanPercent: 80,
-        ),
-      ),
-    );
-
-    ///Crop image with UI rect
-    // finalResult = await _nativeOpencv.cropImageBytes(
-    //   bytes: finalResult,
-    //   rect: CvRectangle(
-    //     left: cropRect.left,
-    //     top: cropRect.top,
-    //     width: cropRect.width,
-    //     height: cropRect.height,
-    //   ),
-    // );
-    final jpgImage = imglib.decodeImage(finalResult);
-    finalResult = await _nativeOpencv.cropImageJpgBytes(
-      bytes: finalResult,
-      rect: CvRectangle(
-        left: cropRect.left,
-        top: cropRect.top,
-        width: cropRect.width,
-        height: cropRect.height,
-      ),
-    );
-
-    ///Update progress to 100% for UI and complete scan
-    emit(
-      HomeScanComplete(
-        data: state.data.copyWith(
-          captureBytes: finalResult,
-          scanPercent: 100,
-          allowScan: false,
-        ),
-        acneList: acneListResult,
-      ),
-    );
-
-    // _cameraService.stopImageStream();
-
-    /// Complete task
-    _scanCompleter?.complete();
-  }
 
   /// Scan acne from camera image
   Future<void> _onAcneScanned(
@@ -342,19 +186,6 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         height: cameraImage.height,
       );
 
-      // final bytes = await _nativeOpencv.convertCameraImageToJpgBytes(
-      //   yBytes: cameraImage.planes[0].bytes,
-      //   uBytes: Platform.isAndroid ? cameraImage.planes[1].bytes : null,
-      //   vBytes: Platform.isAndroid ? cameraImage.planes[2].bytes : null,
-      //   isYUV: Platform.isAndroid,
-      //   bytesPerRow: Platform.isAndroid ? cameraImage.planes[1].bytesPerRow : 0,
-      //   bytesPerPixel:
-      //   Platform.isAndroid ? cameraImage.planes[1].bytesPerPixel ?? 0 : 0,
-      //   width: cameraImage.width,
-      //   height: cameraImage.height,
-      // );
-
-
 
       ///Update progress to 10% for UI
       emit(HomeScanInProgress(data.copyWith(scanPercent: 10)));
@@ -372,9 +203,6 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       ///Update progress to 20% for UI
       emit(HomeScanInProgress(data.copyWith(scanPercent: 20)));
 
-      ///Update progress to 20% for UI
-      // emit(HomeScanInProgress(data.copyWith(scanPercent: 30)));
-
       /// Feed camera image to [_acneScanService] to get acne mask
       await _acneScanService.selectImage(image);
 
@@ -390,6 +218,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         result = await _acneScanService.getAcneBytes();
       }
 
+
       ///Update progress to 70% for UI
       emit(HomeScanInProgress(data.copyWith(scanPercent: 60)));
 
@@ -402,27 +231,17 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         originHeight: cameraImage.height,
         originWidth: cameraImage.width,
       );
-      //
-      // Uint8List finalResult = await _nativeSkaiscan.applyAcneMaskColorJpg(
-      //   maskBytes: Uint8List.fromList(result),
-      //   originBytes: bytes,
-      //   maskHeight: _acneScanService.outPutSize,
-      //   maskWidth: _acneScanService.outPutSize,
-      //   originHeight: cameraImage.height,
-      //   originWidth: cameraImage.width,
-      // );
 
 
       ///Filter to get only value different 0, 0-> background
-      final acneListFilter = result.toSet().where((element) => element != 0);
+      // final acneListFilter = result.toSet().where((element) => element != 0);
 
       ///Convert filter array to acne list
       /// 1 -> papules
       /// 2 -> blackheads
       /// 3 -> pustules
       /// 4 -> whiteheads
-      final acneListResult =
-          acneListFilter.map((index) => Acne.values[index - 1]).toList();
+      // const acneListResult = Acne.values;
 
       ///Crop image with UI rect
       final rect = _uiRectangle;
@@ -439,16 +258,6 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
             height: rect.height,
           ),
         );
-
-        // finalResult = await _nativeOpencv.cropImageJpgBytes(
-        //   bytes: finalResult,
-        //   rect: CvRectangle(
-        //     left: rect.left,
-        //     top: rect.top,
-        //     width: rect.width,
-        //     height: rect.height,
-        //   ),
-        // );
       }
 
       const uuid = Uuid();
@@ -476,7 +285,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
             scanPercent: 100,
             allowScan: false,
           ),
-          acneList: acneListResult,
+          acneList: Acne.values,
         ),
       );
     } catch (e, stack) {
@@ -593,8 +402,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
   ///Calculate rectangle from UI to crop rectangle in image
   Rectangle<int> _calculateCropRectInImage(int originWidth, int originHeight) {
-    const offsetX = 12;
-    const offsetY = 12;
+    const offsetX = 15;
+    const offsetY = 15;
 
     double originTop = ViewUtils.getPercentHeight(percent: 0.08) + 10;
     if (originTop < 60) {

@@ -112,7 +112,6 @@ class _CameraViewState extends State<CameraView> {
 
   @override
   void initState() {
-    // BlocProvider.of<HomeBloc>(context).add(HomePaddingLoaded(widget.viewInsets));
     super.initState();
 
     _cameraService = GetIt.I<CameraService>();
@@ -273,8 +272,6 @@ class _CameraViewState extends State<CameraView> {
       onPressed: () async {
         _showProgressDialog(context, BlocProvider.of<HomeBloc>(context));
         BlocProvider.of<HomeBloc>(context).add(HomeAcneScanned());
-        // BlocProvider.of<HomeBloc>(context)
-        //     .add(HomeAcneAssetScanned('assets/feature/acne_test.png'));
       },
     );
   }

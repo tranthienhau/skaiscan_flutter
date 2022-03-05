@@ -1,1 +1,1 @@
-enum Acne { papules, blackheads, pustules, whiteheads }
+enum Acne { papules, pustules, whiteheads, blackheads }

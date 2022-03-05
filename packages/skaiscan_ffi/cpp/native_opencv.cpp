@@ -484,7 +484,7 @@ void *crop_image_jpg_bytes(unsigned char *bytes, int32_t *imgLengthBytes, int32_
 
 
 //
-//void convert_black_to_transperant(Mat &mask) {
+//void convert_black_to_transparent(Mat &mask) {
 //
 //    Mat gray, thresh_hold;
 //

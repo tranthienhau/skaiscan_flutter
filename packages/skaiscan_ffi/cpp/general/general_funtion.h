@@ -30,6 +30,7 @@ struct MaskColorData {
     };
 };
 
+
 //curl reponse to dart side
 struct CurlResponse{
     const char* data;

@@ -205,8 +205,13 @@ class AppColors {
 
 
   ///Acne colors
-  static const Color papules = Color.fromARGB(255, 250, 224, 150);
-  static const Color blackheads = Color.fromARGB(255, 243, 181, 145);
-  static const Color pustules = Color.fromARGB(255, 215, 138, 136);
-  static const Color whiteheads = Color.fromARGB(255, 165, 161, 236);
+  // static const Color papules = Color.fromARGB(255, 250, 224, 150);
+  // static const Color blackheads = Color.fromARGB(255, 243, 181, 145);
+  // static const Color pustules = Color.fromARGB(255, 215, 138, 136);
+  // static const Color whiteheads = Color.fromARGB(255, 165, 161, 236);
+
+  static const Color papules = Color.fromARGB(255, 0, 0, 128);
+  static const Color pustules = Color.fromARGB(255, 255, 255, 0);
+  static const Color whiteheads = Color.fromARGB(255, 0, 255, 0);
+  static const Color blackheads = Color.fromARGB(255, 139, 0, 0);
 }

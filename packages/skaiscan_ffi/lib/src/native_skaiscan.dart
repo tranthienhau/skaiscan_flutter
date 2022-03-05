@@ -102,7 +102,6 @@ class NativeSkaiscan {
     return bytes;
   }
 
-
   Future<Uint8List> applyAcneMaskColorJpg({
     required Uint8List maskBytes,
     required Uint8List originBytes,
@@ -167,6 +166,126 @@ class NativeSkaiscan {
 
     return bytes;
   }
+
+  Future<Uint8List> threshHoldAcneMaskBytes({
+    required Uint8List maskBytes,
+    required int width,
+    required int height,
+  }) async {
+    final port = ReceivePort();
+
+    /// Spawning an isolate
+    Isolate.spawn<Map<String, dynamic>>(
+      _isolateThreshHoldAcneMaskBytes,
+      {
+        // 'lengthAddress': image.byteLength.address,
+        'sendPort': port.sendPort,
+        'maskBytes': maskBytes,
+        'maskWidth': width,
+        'maskHeight': height,
+      },
+      onError: port.sendPort,
+      // onExit: port.sendPort,
+    );
+
+    final Uint8List? bytes = await port.first as Uint8List?;
+
+    if (bytes == null) {
+      throw Exception('Can not create cv:Mat pointer');
+    }
+
+    return bytes;
+  }
+
+  Future<int> threshHoldAcneIndexMaskBytesToMat({
+    required Uint8List maskBytes,
+    required int width,
+    required int height,
+    required int index,
+  }) async {
+    final port = ReceivePort();
+
+    /// Spawning an isolate
+    Isolate.spawn<Map<String, dynamic>>(
+      _isolateThreshHoldAcneIndexMaskBytesToMat,
+      {
+        'sendPort': port.sendPort,
+        'maskBytes': maskBytes,
+        'width': width,
+        'height': height,
+        'index': index,
+      },
+      onError: port.sendPort,
+      // onExit: port.sendPort,
+    );
+
+    final int? matAddress = await port.first as int?;
+
+    if (matAddress == null) {
+      throw Exception('Can not create cv:Mat pointer');
+    }
+
+    return matAddress;
+  }
+}
+
+void _isolateThreshHoldAcneMaskBytes(Map<String, dynamic> data) {
+  final Uint8List maskBytes = data['maskBytes'];
+  final SendPort sendPort = data['sendPort'];
+  final int maskWidth = data['maskWidth'];
+  final int maskHeight = data['maskHeight'];
+  final maskPointer = _intListToArray(maskBytes);
+
+  Pointer<Int32> imgByteLength = malloc.allocate<Int32>(sizeOf<Int32>());
+
+  Pointer<Uint8> resultPtr = threshHoldAcneMaskBytes(
+      maskPointer, imgByteLength, maskWidth, maskHeight);
+
+  // for (int i = 0; i < imgByteLength.value; i++) {
+  //   int value = resultPtr.elementAt(i).value;
+  //
+  //   if (value > 0) {
+  //     print(value);
+  //   }
+  // }
+
+  Uint8List imageBytes = resultPtr.asTypedList(imgByteLength.value);
+
+  Uint8List copyBytes = Uint8List.fromList(imageBytes);
+
+  malloc.free(imgByteLength);
+  malloc.free(maskPointer);
+  malloc.free(resultPtr);
+
+  sendPort.send(copyBytes);
+}
+// threshHoldAcneIndexMaskBytesToMat
+
+void _isolateThreshHoldAcneIndexMaskBytesToMat(Map<String, dynamic> data) {
+  final Uint8List maskBytes = data['maskBytes'];
+
+  final int width = data['width'];
+  final int height = data['height'];
+  final int index = data['index'];
+
+  final SendPort sendPort = data['sendPort'];
+
+  final maskPointer = _intListToArray(maskBytes);
+
+  // Pointer<Int32> imgByteLength = malloc.allocate<Int32>(sizeOf<Int32>());
+
+  Pointer resultPtr =
+      threshHoldAcneIndexMaskBytesToMat(maskPointer, width, height, index);
+
+  // Uint8List imageBytes = resultPtr.asTypedList(imgByteLength.value);
+
+  // Uint8List copyBytes = Uint8List.fromList(imageBytes);
+
+  // malloc.free(imgByteLength);
+  malloc.free(maskPointer);
+  // malloc.free(resultPtr);
+
+  sendPort.send(resultPtr.address);
 }
 
 void _isolateConvertMaskToColor(Map<String, dynamic> data) {
