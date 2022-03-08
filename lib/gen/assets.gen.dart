@@ -30,8 +30,8 @@ class $AssetsIconGen {
 class $AssetsModelGen {
   const $AssetsModelGen();
 
-  String get model512 => 'assets/model/model_512.tflite';
-  String get unetModel => 'assets/model/unet_model.tflite';
+  String get modelFpn512 => 'assets/model/model_fpn512.tflite';
+  String get modelQuant => 'assets/model/model_quant.tflite';
 }
 
 class Assets {

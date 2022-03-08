@@ -1,3 +1,4 @@
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:skaiscan/all_file/all_file.dart';
 import 'package:skaiscan/widgets/button/common_primary_button.dart';

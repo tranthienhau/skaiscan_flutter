@@ -3,7 +3,7 @@ import 'package:skaiscan/all_file/all_file.dart';
 import 'package:skaiscan/core/theme_provider.dart';
 import 'package:skaiscan/pages/home/ui/home_page.dart';
 import 'package:skaiscan/pages/home/ui/scanned_acne_result_page.dart';
-import 'package:skaiscan/pages/introduce/introduct_page.dart';
+import 'package:skaiscan/pages/introduce/introduce_page.dart';
 import 'package:skaiscan/pages/onboarding/ui/onboarding_page.dart';
 
 class RoutesMapper {

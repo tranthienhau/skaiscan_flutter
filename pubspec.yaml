@@ -63,7 +63,8 @@ dependencies:
   dotted_border: ^2.0.0+2
   isolate_handler: ^1.0.0
   flutter_isolate: ^2.0.0
-  firebase_core: 1.1.0
+  firebase_core: ^1.13.1
+  firebase_analytics: ^9.1.2
   aws_s3_api: ^1.2.0
   uuid: ^3.0.6
 #  aws_s3_upload: ^1.2.0
@@ -86,6 +87,7 @@ dependencies:
 #    path: ./packages/google_vision_api
   skaiscan_ffi:
     path: ./packages/skaiscan_ffi
+  firebase_crashlytics: ^2.5.3
 #  tflite_flutter_helper: ^0.3.1
 #  tflite:
 #    path: ./packages/flutter_tflite

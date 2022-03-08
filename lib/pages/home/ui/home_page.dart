@@ -47,6 +47,11 @@ class _HomePageState extends State<HomePage> {
           return;
         }
 
+        if (state is HomeLoadFailure) {
+          DialogHelper.showError(content: state.error);
+          return;
+        }
+
         if (state is HomeScanComplete) {
           App.pop();
           final result = state.data.captureBytes;

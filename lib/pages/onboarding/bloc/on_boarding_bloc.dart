@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bloc/bloc.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:meta/meta.dart';
 
 part 'on_boarding_event.dart';
@@ -23,6 +24,8 @@ class OnBoardingBloc extends Bloc<OnBoardingEvent, OnBoardingState> {
     OnBoardingPageChanged event,
     Emitter<OnBoardingState> emit,
   ) async {
+
+
     emit(OnBoardingLoadSuccess(event.pageIndex));
   }
 
