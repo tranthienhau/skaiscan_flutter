@@ -56,21 +56,19 @@ class TfAcneScanService implements AcneScanService {
         //
         // _interpreter = await Interpreter.fromAsset('model/model_fpn512.tflite',
         //     options: interpreterOptions);
-        // // _interpreter = await Interpreter.fromAsset('model/model_quant.tflite',
-        // //     options: interpreterOptions);
         //
         // _delegate = delegate;
-
       } catch (e, stackTrace) {
+        _delegate?.delete();
+
         ///Load model
         _interpreter = await Interpreter.fromAsset('model/model_quant.tflite',
             options: options);
-        await FirebaseCrashlytics.instance.recordError(
-          e, stackTrace,
-          reason: 'Can not load model',
-          // Pass in 'fatal' argument
-          fatal: true,
-        );
+        _delegate = null;
+        await FirebaseCrashlytics.instance.recordError(e, stackTrace,
+            reason: 'Can not load model',
+            // Pass in 'fatal' argument
+            fatal: true);
       }
     }
   }

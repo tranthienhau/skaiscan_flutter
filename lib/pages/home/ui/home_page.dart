@@ -128,7 +128,7 @@ class _CameraViewState extends State<CameraView> {
     await _cameraService.startService(widget.description);
     _cameraService.startImageStream();
     _controller = _cameraService.controller;
-
+    // BlocProvider.of<HomeBloc>(context).add(HomeLoaded());
     setState(() {});
   }
 

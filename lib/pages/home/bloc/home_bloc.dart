@@ -8,7 +8,6 @@ import 'package:aws_s3_upload/aws_s3_upload.dart';
 import 'package:bloc/bloc.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get_it/get_it.dart';
 
 // import 'package:google_vision_api/google_vision_api.dart';
@@ -82,7 +81,6 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   Completer<void>? _cameraCheckCompleter;
   Rectangle<int>? _uiRectangle;
 
-
   /// Check face is in correct view
   Future<void> _onCameraFaceChecked(
     HomeCameraFaceChecked event,
@@ -155,7 +153,6 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     _cameraCheckCompleter?.complete();
   }
 
-
   /// Scan acne from camera image
   Future<void> _onAcneScanned(
     HomeAcneScanned event,
@@ -169,6 +166,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     _scanCompleter = Completer<void>();
 
     try {
+      await _cameraService.stopImageStream();
+
       final cameraImage = _cameraImage;
 
       final data = state.data;
@@ -185,7 +184,6 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         width: cameraImage.width,
         height: cameraImage.height,
       );
-
 
       ///Update progress to 10% for UI
       emit(HomeScanInProgress(data.copyWith(scanPercent: 10)));
@@ -218,7 +216,6 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         result = await _acneScanService.getAcneBytes();
       }
 
-
       ///Update progress to 70% for UI
       emit(HomeScanInProgress(data.copyWith(scanPercent: 60)));
 
@@ -231,7 +228,6 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         originHeight: cameraImage.height,
         originWidth: cameraImage.width,
       );
-
 
       ///Filter to get only value different 0, 0-> background
       // final acneListFilter = result.toSet().where((element) => element != 0);
@@ -262,20 +258,20 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
       const uuid = Uuid();
 
-      try {
-        await AwsS3.uploadBytes(
-          bytes: imglib.encodeJpg(image),
-          accessKey: 'AKIASTXIMYTMY4CZ37ZO',
-          bucket: 'skaiscan-collect',
-          fileName: '${uuid.v1()}.jpeg',
-          secretKey: 'hh7l5aV6hyt0L5CmDDbBTXSCe2VlAkjaa6N/OGRC',
-          // acl: ,
-          destDir: '',
-          region: 'eu-central-1',
-        );
-      } catch (e, stack) {
-        _logService.error('Failed upload image', e.toString(), stack);
-      }
+      // try {
+      //   await AwsS3.uploadBytes(
+      //     bytes: imglib.encodeJpg(image),
+      //     accessKey: 'AKIASTXIMYTMY4CZ37ZO',
+      //     bucket: 'skaiscan-collect',
+      //     fileName: '${uuid.v1()}.jpeg',
+      //     secretKey: 'hh7l5aV6hyt0L5CmDDbBTXSCe2VlAkjaa6N/OGRC',
+      //     // acl: ,
+      //     destDir: '',
+      //     region: 'eu-central-1',
+      //   );
+      // } catch (e, stack) {
+      //   _logService.error('Failed upload image', e.toString(), stack);
+      // }
 
       ///Update progress to 100% for UI and complete scan
       emit(
@@ -293,6 +289,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       emit(HomeScanFailure(state.data, e.toString()));
     }
 
+    _cameraService.startImageStream();
     _scanCompleter?.complete();
   }
 
@@ -301,6 +298,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     Emitter<HomeState> emit,
   ) async {
     try {
+      if (state.data.cameraDescriptionList.isNotEmpty) {
+        return;
+      }
+
       /// Get all available cameras
       List<CameraDescription> cameras = await availableCameras();
 
